@@ -1,0 +1,36 @@
+networkId: {{{network}}}
+signers:
+  - public: {{{admin-pk}}}
+    caps:
+      - name: coin.GAS
+        args: []
+      - name: coin.TRANSFER
+        args: ["{{{admin-account}}}", "bonder-bank", 100000.0]
+data:
+  ns: "{{{ns}}}"
+  ns-admin-keyset:
+    keys:
+    - {{{admin-pk}}}
+    pred: keys-all
+publicMeta:
+  chainId: "{{{chain}}}"
+  gasLimit: 100000
+  ttl: 7200
+  sender: {{{admin-account}}}
+  gasPrice: 0.000001
+code: |+
+  (let (
+      (tier-a { 'option-name: "5 minutes", 'option-length: (floor (minutes 5)) , 'time-multiplier: 1.0 , 'poller-max-boost: 1.05 , 'polling-power-multiplier: 5.0 })
+      (tier-b { 'option-name: "10 minutes", 'option-length:(floor (minutes 10)) , 'time-multiplier: 1.1 , 'poller-max-boost: 1.10 , 'polling-power-multiplier: 8.0 })
+      (tier-c { 'option-name: "15 minutes", 'option-length:(floor (minutes 15)) , 'time-multiplier: 1.15 , 'poller-max-boost: 1.15 , 'polling-power-multiplier: 10.0 })
+      (tier-d { 'option-name: "20 minutes", 'option-length:(floor (minutes 20)) , 'time-multiplier: 1.2 , 'poller-max-boost: 1.20 , 'polling-power-multiplier: 20.0 })
+
+      )
+  (dab.bonder.create-bond (add-time (at 'block-time (chain-data)) (minutes 1))
+                          [tier-a tier-b tier-c tier-d]
+                          ["{{{user-account}}}"]
+                          50.0
+                          1000.0
+                          1.05
+                          "{{{admin-account}}}"
+                          100000.0))

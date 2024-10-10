@@ -1,0 +1,31 @@
+'use client'
+// src/app/page.tsx
+import '@reach/dialog/styles.css';
+import React from 'react';
+import { Provider } from 'react-redux';
+import { store } from '../app/store';
+import App from '../App'; // Ensure this is a component, not the Next.js custom App (_app.tsx)
+import ThemeProvider, { ThemedGlobalStyle } from '../features/theme';
+import KadenaProvider from '../features/components/KadenaProvider';
+const BlankComponent = () => <div>This is a blank component for testing.</div>;
+
+const Page = () => {
+
+  // Optional: Use router for client-side routing if needed
+
+  return (
+    <React.StrictMode>
+      <Provider store={store}>
+        <KadenaProvider>
+          <ThemeProvider>
+            <ThemedGlobalStyle />
+      {/* Render your App component or any other content here */}
+            <App />
+          </ThemeProvider>
+        </KadenaProvider>
+      </Provider>
+    </React.StrictMode>
+  );
+};
+
+export default Page;

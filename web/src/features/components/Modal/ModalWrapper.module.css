@@ -1,0 +1,62 @@
+/* ModalWrapper.module.css */
+
+.upperSection {
+  position: relative;
+  padding: 2rem 4rem;
+  display: flex;
+  flex-direction: row;
+  gap: 32px;
+}
+
+/* You'll need to adjust media queries according to your project's setup */
+@media (max-width: 640px) {
+  .upperSection {
+    padding: 1rem;
+    gap: 24px;
+  }
+
+  .closeIcon {
+    top: 1rem;
+    right: 1rem;
+  }
+}
+
+.closeIcon {
+  width: 22px;
+  height: 22px;
+  position: absolute;
+  cursor: pointer;
+  opacity: 0.6;
+  top: 2rem;
+  right: 4rem;
+}
+
+.headerRow {
+  display: flex;
+  flex-wrap: nowrap;
+  font-family: syncopate;
+  text-transform: uppercase;
+  font-size: 1.5rem;
+  color: inherit; /* Adjust the color based on your theme */
+}
+
+@media (max-width: 768px) {
+  .headerRow {
+    font-size: 1rem;
+  }
+}
+
+.contentWrapper {
+  display: flex;
+  flex-direction: row;
+  gap: 24px;
+  background-color: #f7f7f7; /* Adjust the color based on your theme */
+  border-bottom-left-radius: 20px;
+  border-bottom-right-radius: 20px;
+}
+
+@media (max-width: 768px) {
+  .contentWrapper {
+    padding: 0 1rem 1rem 1rem;
+  }
+}

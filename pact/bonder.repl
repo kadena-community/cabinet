@@ -1,0 +1,1066 @@
+(load "setup.repl")
+
+(begin-tx "Deploy bonder contract")
+
+(env-data
+ { 'bonder-admin: ["admin"]
+                  , 'bonder-ops: ["operate"]
+                  , 'ns: "dab"
+                  , 'upgrade: false})
+(env-keys ["admin", "operate"])
+(namespace 'dab)
+(define-keyset "dab.bonder-admin" (read-keyset "bonder-admin"))
+(define-keyset "dab.bonder-ops" (read-keyset "bonder-ops"))
+
+(load "bonder.pact")
+(load "bonder-utils.pact")
+(commit-tx)
+
+(begin-tx "Validating Principal Accounts")
+                                        ;(dab.bonder.validate-principal-account "aliceaddress")
+;; (env-data { 'alice: ["584deb6f81d8efe67767309d1732019cf6ad14f9f0007cff50c730ef62521c68"],
+;;                     'multisig: ["a" "b"] })
+;; (let* (
+;;        (kacc (create-principal (read-keyset 'alice))) ;; Defined from a single key keyset
+;;        (pr (create-principal (keyset-ref-guard 'alice-keyset))) ;; Defined via reference
+;;        (multipr (create-principal (read-keyset 'multisig))) ;; Defined via multisig keyset
+;;        )
+;;
+;;    (is-principal pr)
+;;    (is-principal multipr)
+;;    (is-principal kacc)
+;;    (typeof-principal pr)
+;;    (typeof-principal multipr)
+;;    (typeof-principal kacc)
+;;    (validate-principal (keyset-ref-guard 'alice-keyset) "r:alice-keyset")
+;;    (expect-failure "r:accounts not accepted" (enforce (dab.bonder.validate-principal-account pr)))
+;;    (expect-failure "w:accounts not accepted" (enforce (dab.bonder.validate-principal-account multipr)))
+;;    (dab.bonder.validate-principal-account kacc)
+;;    ])
+(commit-tx)
+
+
+(begin-tx "Fund accounts with coin")
+(env-data
+ { 'bob: ["bob"]
+         ,'alice: ["alice"]
+         ,'tom: ["tom"]
+         , 'fill: ["fill"]})
+(env-keys ["bob", "alice","tom" , "fill"])
+(test-capability (coin.COINBASE))
+(coin.coinbase "k:bob" (read-keyset 'bob) 100000.0)
+(coin.coinbase "k:alice" (read-keyset 'alice) 50000.0)
+(coin.coinbase "k:tom" (read-keyset 'tom) 501000.0)
+(coin.coinbase "k:fill" (read-keyset 'fill) 101000.0)
+(coin.coinbase "k:free" (read-keyset 'alice) 100000.0)
+(commit-tx)
+
+(env-gasmodel "table")
+(env-gaslimit 10000)
+
+
+(begin-tx "Grant bob bond creation privilege")
+(env-keys ["operate"])
+(dab.bonder.add-bond-creator "k:bob")
+(expect "Gas cost of adding a bond creator" 159 (env-gas))
+
+(dab.bonder.add-bond-creator "k:tom")
+(expect "Gas cost of adding a bond creator twice in same tx" 317 (env-gas))
+
+(dab.bonder.add-bond-creator "k:alice")
+(expect "Gas cost of adding a bond creator trice in same tx" 476 (env-gas))
+
+(commit-tx)
+
+
+(begin-tx "Invalid Bond Creation - Start Time in the Past")
+(env-keys ["admin"])
+(env-chain-data {"block-time": (time "2024-06-15T00:00:00Z")})
+(env-keys ["operate", "bob"])
+(test-capability (coin.DEBIT "k:bob"))
+
+
+(let (
+      (tier-a { 'option-name: "3 months", 'option-length: (floor (days 90)) , 'time-multiplier: 10.0 , 'poller-max-boost: 1.1 , 'polling-power-multiplier: 5.0 })
+      (tier-b { 'option-name: "6 months", 'option-length: (floor (days 180)) , 'time-multiplier: 1.5 , 'poller-max-boost: 1.15 , 'polling-power-multiplier: 8.0 })
+
+      )
+  (expect-failure "Start should not be in the past"
+                  "Tx Failed: Chain time must be at or before \"2024-01-10T00:00:00Z\""
+                  (dab.bonder.create-bond (time "2024-01-10T00:00:00Z")
+                                          [tier-a tier-b]
+                                          []
+                                          100.0
+                                          10000.0
+                                          1.0
+                                          "k:bob"
+                                          1000.0)))
+(commit-tx)
+(begin-tx "Invalid Bond Creation - Negative Reward")
+(env-chain-data {"block-time": (time "2024-01-01T00:00:00Z")})
+(env-keys ["operate", "bob"])
+(test-capability (coin.DEBIT "k:bob"))
+
+(let (
+      (tier-a {'option-name: "3 months", 'option-length: (floor (days 90)) , 'time-multiplier: 0.25 , 'poller-max-boost: 1.1 , 'polling-power-multiplier: 5.0 })
+      (tier-b {'option-name: "6 months",  'option-length: (floor (days 180)) , 'time-multiplier: 0.5 , 'poller-max-boost: 1.15 , 'polling-power-multiplier: 8.0 })
+
+      )
+  (expect-failure "Reward amount should be non-negative"
+                  "Tx Failed: A lockup sale needs to have positive rewards"
+                  (dab.bonder.create-bond (time "2024-01-11T00:00:00Z")
+                                          [tier-a tier-b]
+                                          []
+                                          100.0
+                                          10000.0
+                                          1.1
+                                          "k:bob"
+                                          -100.0)
+                  )
+  )
+(commit-tx)
+
+
+
+(begin-tx "Invalid Bond Creation - Violate lockup constraints 1 - time-multiplier")
+(env-chain-data {"block-time": (time "2024-01-10T00:00:00Z")})
+(env-sigs [
+           {'key: "bob"
+                  ,     'caps:  [
+                                 (coin.TRANSFER "k:bob" "c:J_9VEDfyu4PaZ_fzvDOKI5TiJ6miimaTgbDt396fdY8" 1000.0)
+                                 ]         }
+           , {'key: "operate", 'caps: []}           ])
+(env-keys ["operate", "bob"])
+(test-capability (coin.DEBIT "k:bob"))
+
+(let (
+      (tier-a {'option-name: "3 months",  'option-length: (floor (days 90)) , 'time-multiplier: 0.25 , 'poller-max-boost: 1.1 , 'polling-power-multiplier: 5.0 })
+      (tier-b { 'option-name: "6 months", 'option-length: (floor (days 180)) , 'time-multiplier: 1.5 , 'poller-max-boost: 1.15 , 'polling-power-multiplier: 8.0 })
+
+      )
+  (expect-failure
+   "Time multiplier should be at least 1.0"
+   "Tx Failed: Time multiplier should be at least 1.0"
+   (dab.bonder.create-bond (time "2024-01-11T00:00:00Z")
+                           [tier-a tier-b]
+                           ["k:tom"]
+                           100.0
+                           10000.0
+                           1.0
+                           "k:bob"
+                           250.0)))
+(commit-tx)
+
+
+
+(begin-tx "Invalid Bond Creation - Violate lockup constraints 2 - poller-max-boost")
+(env-chain-data {"block-time": (time "2024-01-10T00:00:00Z")})
+(env-sigs [
+           {'key: "bob"
+                  ,     'caps:  [
+                                 (coin.TRANSFER "k:bob" "c:J_9VEDfyu4PaZ_fzvDOKI5TiJ6miimaTgbDt396fdY8" 1000.0)
+                                 ]         }
+           , {'key: "operate", 'caps: []}           ])
+(env-keys ["operate", "bob"])
+(test-capability (coin.DEBIT "k:bob"))
+
+(let (
+      (tier-a { 'option-name: "3 months", 'option-length: (floor (days 90)) , 'time-multiplier: 1.25 , 'poller-max-boost: 0.1 , 'polling-power-multiplier: 5.0 })
+      (tier-b { 'option-name: "6 months", 'option-length: (floor (days 180)) , 'time-multiplier: 1.5 , 'poller-max-boost: 1.15 , 'polling-power-multiplier: 8.0 })
+
+      )
+  (expect-failure
+   "Poller max boost should be at least 1.0"
+   "Tx Failed: Poller max boost should be at least 1.0"
+   (dab.bonder.create-bond (time "2024-01-11T00:00:00Z")
+                           [tier-a tier-b]
+                           ["k:tom"]
+                           100.0
+                           10000.0
+                           1.0
+                           "k:bob"
+                           250.0)))
+(commit-tx)
+
+
+
+(begin-tx "Invalid Bond Creation - Violate lockup constraints 3 - polling-power-multiplier")
+(env-chain-data {"block-time": (time "2024-01-10T00:00:00Z")})
+(env-sigs [
+           {'key: "bob"
+                  ,     'caps:  [
+                                 (coin.TRANSFER "k:bob" "c:J_9VEDfyu4PaZ_fzvDOKI5TiJ6miimaTgbDt396fdY8" 1000.0)
+                                 ]         }
+           , {'key: "operate", 'caps: []}           ])
+(env-keys ["operate", "bob"])
+(test-capability (coin.DEBIT "k:bob"))
+
+(let (
+      (tier-a { 'option-name: "3 months", 'option-length: (floor (days 90)) , 'time-multiplier: 1.25 , 'poller-max-boost: 1.1 , 'polling-power-multiplier: 0.1 })
+      (tier-b { 'option-name: "6 months", 'option-length: (floor (days 180)) , 'time-multiplier: 1.5 , 'poller-max-boost: 1.15 , 'polling-power-multiplier: 8.0 })
+
+      )
+  (expect-failure
+   "Polling power multipliers should be at least 1.0"
+   "Tx Failed: Polling power should be at least 1.0"
+   (dab.bonder.create-bond (time "2024-01-11T00:00:00Z")
+                           [tier-a tier-b]
+                           ["k:tom"]
+                           100.0
+                           10000.0
+                           1.0
+                           "k:bob"
+                           250.0)))
+(commit-tx)
+
+(begin-tx "Invalid Bond Creation - Violate lockup constraints 4 - recurring lenghts")
+(env-chain-data {"block-time": (time "2024-01-10T00:00:00Z")})
+(env-sigs [
+           {'key: "bob"
+                  ,     'caps:  [
+                                 (coin.TRANSFER "k:bob" "c:J_9VEDfyu4PaZ_fzvDOKI5TiJ6miimaTgbDt396fdY8" 1000.0)
+                                 ]         }
+           , {'key: "operate", 'caps: []}           ])
+(env-keys ["operate", "bob"])
+(test-capability (coin.DEBIT "k:bob"))
+
+(let (
+      (tier-a { 'option-name: "3 months", 'option-length: (floor (days 90)) , 'time-multiplier: 1.25 , 'poller-max-boost: 1.1 , 'polling-power-multiplier: 1.1 })
+      (tier-b { 'option-name: "Three months", 'option-length: (floor (days 90)) , 'time-multiplier: 1.5 , 'poller-max-boost: 1.15 , 'polling-power-multiplier: 8.0 })
+
+      )
+  (expect-failure
+   "There cannot be multiple tiers with the same length"
+   "Tx Failed: All lockup options should be distinct"
+   (dab.bonder.create-bond (time "2024-01-11T00:00:00Z")
+                           [tier-a tier-b]
+                           ["k:tom"]
+                           100.0
+                           10000.0
+                           1.0
+                           "k:bob"
+                           250.0)))
+(commit-tx)
+
+
+(begin-tx "Invalid Bond Creation - non core member atempting to create bond sale 1")
+(env-chain-data {"block-time": (time "2024-01-10T00:00:00Z")})
+(env-sigs [
+           {'key: "fill"
+                  ,     'caps:  [
+                                 (coin.TRANSFER "k:fill" "c:J_9VEDfyu4PaZ_fzvDOKI5TiJ6miimaTgbDt396fdY8" 1000.0)
+                                 ] }
+           ])
+(let (
+      (tier-a {'option-name: "12 months",  'option-length: (floor (days 365)) , 'time-multiplier: 1.5 , 'poller-max-boost: 1.0 , 'polling-power-multiplier: 1.0 })
+      (tier-b {'option-name: "24 months",  'option-length: (floor (days 730)) , 'time-multiplier: 2.0 , 'poller-max-boost: 1.0 , 'polling-power-multiplier: 2.0 })
+      (tier-c {'option-name: "2 hours", 'option-length: (floor (hours 2)) , 'time-multiplier: 1.2 , 'poller-max-boost: 1.2 , 'polling-power-multiplier: 1.0 })
+
+      )
+  (expect-failure "Can't create a bond without Core Privileges"
+                  "Tx Failed: You must be a Core Member to create lockup sales."
+                  (dab.bonder.create-bond (time "2024-01-13T00:00:00Z")
+                                          [tier-a tier-b tier-c]
+                                          ["k:bob"]
+                                          100.0
+                                          1000.0
+                                          1.0
+                                          "k:fill"
+                                          1000.0)))
+
+(commit-tx)
+
+(begin-tx "Invalid Bond Creation - non core member atempting to create bond sale 2")
+(env-chain-data {"block-time": (time "2024-01-10T00:00:00Z")})
+(env-sigs [
+           {'key: "fill"
+                  ,     'caps:  [
+                                 (coin.TRANSFER "k:alice" "c:J_9VEDfyu4PaZ_fzvDOKI5TiJ6miimaTgbDt396fdY8" 1000.0)
+                                 ] }
+           ])
+(let (
+      (tier-a {'option-name: "12 months",  'option-length: (floor (days 365)) , 'time-multiplier: 1.5 , 'poller-max-boost: 1.0 , 'polling-power-multiplier: 1.0 })
+      (tier-b {'option-name: "24 months",  'option-length: (floor (days 730)) , 'time-multiplier: 2.0 , 'poller-max-boost: 1.0 , 'polling-power-multiplier: 2.0 })
+      (tier-c {'option-name: "2 hours", 'option-length: (floor (hours 2)) , 'time-multiplier: 1.2 , 'poller-max-boost: 1.2 , 'polling-power-multiplier: 1.0 })
+
+      )
+  (expect-failure "Cannot transfer in behalf of others"
+                  "Tx Failed: Keyset failure (keys-all): [alice]"
+                  (dab.bonder.create-bond (time "2024-01-13T00:00:00Z")
+                                          [tier-a tier-b tier-c]
+                                          ["k:bob"]
+                                          100.0
+                                          1000.0
+                                          1.0
+                                          "k:alice"
+                                          1000.0)))
+
+(commit-tx)
+
+(begin-tx "Invalid Bond Creation - non core member atempting to create bond sale 3")
+(env-chain-data {"block-time": (time "2024-01-10T00:00:00Z")})
+(env-sigs [
+           {'key: "fill"
+                  ,     'caps:  [
+                                 (coin.TRANSFER "k:fill" "c:J_9VEDfyu4PaZ_fzvDOKI5TiJ6miimaTgbDt396fdY8" 1000.0)
+                                 ] }
+           ])
+(let (
+      (tier-a {'option-name: "12 months",  'option-length: (floor (days 365)) , 'time-multiplier: 1.5 , 'poller-max-boost: 1.0 , 'polling-power-multiplier: 1.0 })
+      (tier-b {'option-name: "24 months",  'option-length: (floor (days 730)) , 'time-multiplier: 2.0 , 'poller-max-boost: 1.0 , 'polling-power-multiplier: 2.0 })
+      (tier-c {'option-name: "2 hours", 'option-length: (floor (hours 2)) , 'time-multiplier: 1.2 , 'poller-max-boost: 1.2 , 'polling-power-multiplier: 1.0 })
+
+      )
+  (expect-failure "Cannot create bond with the wrong transfer cap"
+                  "Failure: Managed capability not installed: (coin.TRANSFER \"k:alice\" \"c:J_9VEDfyu4PaZ_fzvDOKI5TiJ6miimaTgbDt396fdY8\" 1000.0)"
+                  (dab.bonder.create-bond (time "2024-01-13T00:00:00Z")
+                                          [tier-a tier-b tier-c]
+                                          ["k:bob"]
+                                          100.0
+                                          1000.0
+                                          1.0
+                                          "k:alice"
+                                          1000.0)))
+
+(commit-tx)
+
+
+(env-gasmodel "table")
+(env-gaslimit 100000)
+
+
+(begin-tx "Helper summarizer module")
+(module summarizer GOV
+
+  (use dab.bonder)
+  
+  (defcap GOV () true)
+
+  (defun is-not-empty:bool (x:list)
+    "Return true if the list is not empty"
+    (< 0 (length x)))
+
+  (defun enforce-not-empty:bool (x:list)
+    "Verify and ENFORCES that a list is not empty"
+    (enforce (is-not-empty x) "List cannot be empty"))
+
+  (defun min:decimal (x:decimal y:decimal)
+    "Returns the min of 2 values"
+    (if (< x y) x y))
+
+  (defun min-list:decimal (x:[decimal])
+    "Returns the min of a list"
+    (enforce-not-empty x)
+    (fold (min) (first x) (remove-first x))
+    )
+
+  (defun first (in:list)
+    "Returns the first item of a list"
+    (enforce-not-empty in)
+    (at 0 in))
+
+  (defun remove-first:list (in:list)
+    "Remove first element from the list"
+    (enforce-not-empty in)
+    (drop 1 in)
+    )
+
+  (defun max:decimal (x:decimal y:decimal)
+    "Returns the max of 2 values"
+    (if (> x y) x y))
+
+  (defun max-list:decimal (x:[decimal])
+    "Returns the max of a list"
+    (enforce-not-empty x)
+    (fold (max) (first x) (remove-first x))
+    )
+
+  (defun compute-bond-summary (bond:object{bond-sale})
+    (let* (
+           (bond-id (at 'bond-id bond))
+           (max-amount (at 'max-amount bond))
+           (min-amount (at 'min-amount bond))
+           (options (at 'lockup-options bond))
+           (l1 (map (lambda (y) (take ['option-length] y)) options))
+           (lengths (map (lambda (x) (at 'option-length x)) l1))
+           (max-kda-rewards-per-option (map (lambda (x) (calculate-max-rewards max-amount x bond-id)) lengths))
+           (min-kda-rewards-per-option (map (lambda (x) (calculate-min-rewards min-amount x bond-id)) lengths))
+           (max-roi-per-option (map (lambda (x) (+ 1.0 (/ x max-amount))) max-kda-rewards-per-option))
+           (min-roi-per-option (map (lambda (x) (+ 1.0 (/ x min-amount))) min-kda-rewards-per-option))
+           )
+
+      {
+       'max-roi: (max-list max-roi-per-option),
+       'min-roi: (min-list min-roi-per-option),
+       'max-kda-rewards: (max-list max-kda-rewards-per-option),
+       'min-kda-rewards: (min-list min-kda-rewards-per-option)
+       }
+      )
+
+    )
+
+  (defun compute-lockup-summary (lockup:object{lockup})
+    (let*
+        (
+         (bond-id (at 'bond-id lockup))
+         (bond (read-bond bond-id))
+         (option (at 'lockup-option lockup))
+         (amount (at 'kda-locked lockup))
+         (option-length (at 'option-length option))
+         (max-rewards (at 'max-kda-rewards lockup))
+         (min-rewards (calculate-min-rewards amount option-length bond-id))
+         (predicted-returns (calculate-lockup-returns bond-id (at 'account lockup)))
+         )
+      {
+       'start-time: (at 'lockup-start-time lockup),
+       'max-roi: (+ 1.0 (/ max-rewards amount)),
+       'min-roi: (+ 1.0 (/ min-rewards amount)),
+       'max-kda-rewards: max-rewards,
+       'min-kda-rewards: min-rewards,
+       'total-polls: (at 'total-polls bond),
+       'interactions: (at 'interactions lockup) ,
+       'predicted-kda-returns: predicted-returns,
+       'predicted-kda-rewards: (- predicted-returns amount),
+       'predicted-roi: (/ predicted-returns amount)
+       }
+      )
+    )
+  )
+(use summarizer)
+(commit-tx)
+
+(env-gasmodel "table")
+(env-gaslimit 5000)
+
+
+
+(begin-tx "Valid Bond Creation - A bond weighting rewards and participation")
+(env-chain-data {"block-time": (time "2024-01-10T00:00:00Z")})
+(env-sigs [
+           {'key: "bob"
+                  ,     'caps:  [
+                                 (coin.TRANSFER "k:bob" "c:J_9VEDfyu4PaZ_fzvDOKI5TiJ6miimaTgbDt396fdY8" 15000.0)
+                                 ]         }
+           ])
+(let (
+      (tier-a {'option-name: "3 months",  'option-length: (floor (days 90)) , 'time-multiplier: 1.25 , 'poller-max-boost: 1.1 , 'polling-power-multiplier: 5.0 })
+      (tier-b {'option-name: "6 months",  'option-length: (floor (days 180)) , 'time-multiplier: 1.5 , 'poller-max-boost: 1.15 , 'polling-power-multiplier: 8.0 })
+
+      )
+  (dab.bonder.create-bond (time "2024-01-11T00:00:00Z")
+                          [tier-a tier-b]
+                          ["k:tom"]
+                          100.0
+                          10000.0
+                          1.1
+                          "k:bob"
+                          1500.0))
+
+(expect "Gas cost of a bond creation" 1480 (env-gas))
+
+(let (
+      (bond (dab.bonder.read-bond "LOCKUP_SALE-1"))
+      )
+  (summarizer.compute-bond-summary bond)
+  )
+(commit-tx)
+
+(begin-tx "Valid Bond Creation - No participation rewards")
+(env-chain-data {"block-time": (time "2024-01-10T00:00:00Z")})
+(env-sigs [
+           {'key: "alice"
+                  ,     'caps:  [
+                                 (coin.TRANSFER "k:alice" "c:J_9VEDfyu4PaZ_fzvDOKI5TiJ6miimaTgbDt396fdY8" 10000.0)
+                                 ] }
+           ])
+(let (
+      (tier-a {'option-name: "12 months",  'option-length: (floor (days 365)) , 'time-multiplier: 1.5 , 'poller-max-boost: 1.0 , 'polling-power-multiplier: 1.0 })
+      (tier-b {'option-name: "24 months",  'option-length: (floor (days 730)) , 'time-multiplier: 2.0 , 'poller-max-boost: 1.0 , 'polling-power-multiplier: 2.0 })
+      (tier-c {'option-name: "2 hours", 'option-length: (floor (hours 2)) , 'time-multiplier: 1.2 , 'poller-max-boost: 1.2 , 'polling-power-multiplier: 1.0 })
+
+      )
+  (dab.bonder.create-bond (time "2024-01-13T00:00:00Z")
+                          [tier-a tier-b tier-c]
+                          ["k:bob"]
+                          100.0
+                          1000.0
+                          1.0
+                          "k:alice"
+                          10000.0))
+(expect "Gas cost of a bond creation" 1630 (env-gas))
+
+(let (
+      (bond (dab.bonder.read-bond "LOCKUP_SALE-2"))
+      )
+
+  (summarizer.compute-bond-summary bond)
+  )
+(commit-tx)
+
+
+(begin-tx "Valid Bond Creation - Only participation rewards")
+(env-sigs [
+           {'key: "tom"
+                  ,     'caps:  [
+                                 (coin.TRANSFER "k:tom" "c:J_9VEDfyu4PaZ_fzvDOKI5TiJ6miimaTgbDt396fdY8" 1000.0)
+                                 ] }
+           ])
+(let (
+      (tier-a {'option-name: "12 months",  'option-length: (floor (days 365)) , 'time-multiplier: 1.0 , 'poller-max-boost: 1.5 , 'polling-power-multiplier: 1.0 })
+      (tier-b {'option-name: "24 months",  'option-length: (floor (days 730)) , 'time-multiplier: 1.0 , 'poller-max-boost: 2.0 , 'polling-power-multiplier: 2.0 })
+
+      )
+  (dab.bonder.create-bond (time "2024-01-12T00:00:00Z")
+                          [tier-a tier-b]
+                          ["k:tom"]
+                          100.0
+                          1000000.0
+                          1.0
+                          "k:tom"
+                          1000.0))
+(expect "Gas cost of a bond creation" 1479 (env-gas))
+
+
+(let (
+      (bond (dab.bonder.read-bond "LOCKUP_SALE-3"))
+      )
+  (summarizer.compute-bond-summary bond)
+  )
+(commit-tx)
+
+
+
+
+(begin-tx "Check utility functions")
+(env-keys ["admin"])
+(env-chain-data {"block-time": (time "2024-01-09T14:59:00Z")})
+(env-keys ["operate", "bob"])
+(test-capability (coin.DEBIT "k:bob"))
+(dab.bonder.read-bond "LOCKUP_SALE-1")
+                                        ;(dab.bonder.read-all-bonds)
+(dab.bonder.calculate-max-rewards 100.0 (floor (days 180)) "LOCKUP_SALE-1")
+(expect-failure "You can only lock for prefixed amount of time" "Tx Failed: Option not found" (dab.bonder.calculate-max-rewards 10.0 (floor (days 150)) "LOCKUP_SALE-1"))
+(expect-failure "Negative lock amount" "Tx Failed: Only amounts between 100.0 and 10000.0 can be locked" (dab.bonder.calculate-max-rewards -10.0 (floor (days 180)) "LOCKUP_SALE-1"))
+(expect-failure "Lock amount too small" "Tx Failed: Only amounts between 100.0 and 10000.0 can be locked" (dab.bonder.calculate-max-rewards 10.0 (floor (days 180)) "LOCKUP_SALE-1"))
+(expect-failure "Lock amount too big"  "Tx Failed: Only amounts between 100.0 and 10000.0 can be locked" (dab.bonder.calculate-max-rewards 100000000000.0 (floor (days 180)) "LOCKUP_SALE-1"))
+(expect-failure "Bond does not exist" "Tx Failed: read: row not found" (dab.bonder.calculate-max-rewards 500.0 (floor (days 180)) "aaaaa"))
+
+(commit-tx)
+
+(begin-tx "Invalid Lock - Bond sales have not started")
+(env-sigs [
+           {'key: "alice"
+                  ,     'caps:  [
+                                 (coin.TRANSFER "k:alice" "c:J_9VEDfyu4PaZ_fzvDOKI5TiJ6miimaTgbDt396fdY8" 1500.0)
+                                 ]         }
+           ])
+
+(env-chain-data {"block-time": (time "2024-01-10T20:59:00Z")})
+(expect-failure "You Cannot bond yet!" "Only Whitelisted accounts can enter before start-time" (dab.bonder.lock "LOCKUP_SALE-1" (floor (days 180)) 1500.0 "k:alice"))
+(commit-tx)
+
+(begin-tx "Invalid Lock - Program at capacity")
+(env-chain-data {"block-time": (time "2024-01-13T20:59:00Z")})
+(env-sigs [
+           {'key: "fill"
+                  ,     'caps:  [
+                                 (coin.TRANSFER "k:fill" "c:J_9VEDfyu4PaZ_fzvDOKI5TiJ6miimaTgbDt396fdY8" 10000.0)
+                                 ]         }
+           ])
+
+(expect-failure "Program is already full" "No rewards available for this lockup, try setting a lower amount." (dab.bonder.lock "LOCKUP_SALE-1" (floor (days 180)) 10000.0 "k:fill"))
+(commit-tx)
+
+
+(begin-tx "Invalid Lock - Amount below minimum")
+(env-chain-data {"block-time": (time "2024-01-12T20:59:00Z")})
+(env-keys ["alice"])
+(test-capability (coin.DEBIT "k:alice"))
+(expect-failure " Lock amount below minimum" "Tx Failed: Only amounts between 100.0 and 10000.0 can be locked" (dab.bonder.lock "LOCKUP_SALE-1" (floor (days 180)) 50.0 "k:alice"))
+(dab.bonder.read-bond "LOCKUP_SALE-1")
+(commit-tx)
+
+
+(begin-tx "Invalid Lock - Amount above maximum")
+(env-chain-data {"block-time": (time "2024-01-12T20:59:00Z")})
+(env-keys ["fill"])
+(test-capability (coin.DEBIT "k:fill"))
+(expect-failure "Lock amount above maximum" "Tx Failed: Only amounts between 100.0 and 10000.0 can be locked" (dab.bonder.lock "LOCKUP_SALE-1" (floor (days 180)) 200000.0 "k:fill"))
+(dab.bonder.read-bond "LOCKUP_SALE-1")
+(commit-tx)
+
+(begin-tx "Lock and Claim Without any Polls - Part 1")
+(env-chain-data {"block-time": (time "2024-01-13T00:10:00Z")})
+(env-sigs [
+           {'key: "bob"
+                  ,     'caps:  [
+                                 (coin.TRANSFER "k:bob" "c:J_9VEDfyu4PaZ_fzvDOKI5TiJ6miimaTgbDt396fdY8" 500.0)
+                                 ]         }
+           ])
+(dab.bonder.lock "LOCKUP_SALE-2" (floor (hours 2)) 500.0 "k:bob")
+(expect "Gas cost of a lockup creation" 1480 (env-gas))
+
+
+(let (
+      (bond (dab.bonder.read-bond "LOCKUP_SALE-2"))
+      )
+  (expect "There are no polls on this bond" 0 (at 'total-polls bond))
+  )
+(commit-tx)
+
+(begin-tx "Lock and Claim Without any Polls - Part 2")
+(env-chain-data {"block-time": (time "2024-01-13T02:11:00Z")})
+(env-sigs [{'key: "bob"
+                  ,     'caps:  [
+                                 (dab.bonder.CLAIM "LOCKUP_SALE-2" "k:bob" 500.0 500.0)
+                                 ]         }
+           ])
+(let (
+      (bond (dab.bonder.read-bond "LOCKUP_SALE-2"))
+      (balance-before (coin.get-balance "k:bob"))
+      (lockup-amount (at 'kda-locked (dab.bonder.read-lockup (dab.bonder.get-lockup-key "LOCKUP_SALE-2" "k:bob"))))
+      )
+  (dab.bonder.claim "LOCKUP_SALE-2" "k:bob")
+  (expect "Gas cost of a lockup claim" 1208 (env-gas))
+
+  (let
+      (
+       (balance-after (coin.get-balance "k:bob")))
+    (expect "There are still no polls for this bond" 0 (at 'total-polls bond))
+    (expect "Bob didn't get any rewards" balance-after (+ balance-before lockup-amount))
+    )
+  )
+(commit-tx)
+
+(begin-tx "Tom's Whitelisted Lock on Bob's bond")
+(env-chain-data {"block-time": (time "2024-01-13T20:59:00Z")})
+(env-sigs [
+           {'key: "tom"
+                  ,     'caps:  [
+                                 (coin.TRANSFER "k:tom" "c:J_9VEDfyu4PaZ_fzvDOKI5TiJ6miimaTgbDt396fdY8" 1000.0)
+                                 ]         }
+           ])
+(dab.bonder.lock "LOCKUP_SALE-1" (floor (days 180)) 1000.0 "k:tom")
+(expect "Gas cost of a lockup creation" 1472 (env-gas))
+
+
+(expect "Tom's lockup was correctly included on the table and computed in the active users" true
+        (and (not (dab.bonder.can-account-bond "k:tom" "LOCKUP_SALE-1")) (= 1 (at 'active-bonders (dab.bonder.read-bond "LOCKUP_SALE-1")))))
+;;NOTE: Tom locked the maximum amount on the longest tier. So his max-roi should be the maximum of the bond.
+;; But currently he is earning his minimum-roi since there are no polls.
+(let* (
+       (lockup-summary (summarizer.compute-lockup-summary (dab.bonder.read-lockup (dab.bonder.get-lockup-key "LOCKUP_SALE-1" "k:tom"))))
+       (bond-summary (summarizer.compute-bond-summary (dab.bonder.read-bond "LOCKUP_SALE-1")))
+       )
+  (expect "Tom's max ROI is the same as the bond's" true (= (at 'max-roi lockup-summary) (at 'max-roi bond-summary)))
+  (expect "Tom's current ROI is at 1.0" true (= (at 'predicted-roi lockup-summary) 1.0))
+  )
+(commit-tx)
+
+(begin-tx "Bobs's Whitelisted Lock on Alices's bond")
+;;NOTE: Observe that this is Bob's second lockup on this bond
+(env-chain-data {"block-time": (time "2024-01-12T20:59:00Z")})
+(env-sigs [
+           {'key: "bob"
+                  ,     'caps:  [
+                                 (coin.TRANSFER "k:bob" "c:J_9VEDfyu4PaZ_fzvDOKI5TiJ6miimaTgbDt396fdY8" 500.0)
+                                 ]         }
+           ])
+(dab.bonder.lock "LOCKUP_SALE-2" (floor (days 365)) 500.0 "k:bob")
+(expect "Gas cost of a lockup creation" 1494 (env-gas))
+
+(expect "Bobs's lockup was correctly included on the table and computed in the active users" true
+        (and (not (dab.bonder.can-account-bond "k:bob" "LOCKUP_SALE-2")) (= 1 (at 'active-bonders (dab.bonder.read-bond "LOCKUP_SALE-2")))))
+;;NOTE: The bond that bob is participating in does not account for participation in computing rewards, so his
+;; max-roi should be equal to the min-roi
+;; NOTE: Let us also take this opportunity to verify that the current available rewards on the bond is the
+;; same as the total rewards minus bob's max-kda-rewards
+(let* (
+       (lockup-summary (summarizer.compute-lockup-summary (dab.bonder.read-lockup (dab.bonder.get-lockup-key "LOCKUP_SALE-2" "k:bob"))))
+       (bond (dab.bonder.read-bond "LOCKUP_SALE-2"))
+       )
+  (expect "Bob's max ROI is the same as his min ROI" true (= (at 'max-roi lockup-summary) (at 'min-roi lockup-summary)))
+  (expect "Bob's rewards are being correctly tracked on the bond table" true (=  (at 'max-kda-rewards lockup-summary) (at 'locked-rewards bond)))
+  (expect "Bob's current ROI is at 1.0" true (= (at 'predicted-roi lockup-summary) 1.0))
+  )
+(commit-tx)
+
+
+(begin-tx "Alice Lock on Bob's bond")
+(env-chain-data {"block-time": (time "2024-01-12T20:59:00Z")})
+(env-sigs [
+           {'key: "alice"
+                  ,     'caps:  [
+                                 (coin.TRANSFER "k:alice" "c:J_9VEDfyu4PaZ_fzvDOKI5TiJ6miimaTgbDt396fdY8" 101.0)
+                                 ]         }
+           ])
+(dab.bonder.lock "LOCKUP_SALE-1" (floor (days 90)) 101.0 "k:alice")
+(expect "Gas cost of a lockup creation" 1481 (env-gas))
+
+(dab.bonder.read-bond "LOCKUP_SALE-1")
+(expect "Alice's lockup was correctly included on the table and computed in the active users"
+        true (and (not (dab.bonder.can-account-bond "k:alice" "LOCKUP_SALE-1")) (= 2 (at 'active-bonders (dab.bonder.read-bond "LOCKUP_SALE-1")))))
+;;NOTE: Alice locked 1.01 times the minimum amount on the shortest tier. So her min-roi should be 1.01 the minimum of the bond.
+(let* (
+       (lockup-summary (summarizer.compute-lockup-summary (dab.bonder.read-lockup (dab.bonder.get-lockup-key "LOCKUP_SALE-1" "k:alice"))))
+       (bond-summary (summarizer.compute-bond-summary (dab.bonder.read-bond "LOCKUP_SALE-1")))
+       )
+  (expect "Alice's min-kda-rewards is close to the bond's" true (= (at 'min-kda-rewards lockup-summary) (* 1.01 (at 'min-kda-rewards bond-summary))))
+  (expect "Alices's current ROI is currently at 1" true (= (at 'predicted-roi lockup-summary) 1.0))
+  )
+(commit-tx)
+
+
+(begin-tx "Alice Lock on Toms's bond")
+(env-chain-data {"block-time": (time "2024-01-12T20:59:00Z")})
+(env-sigs [
+           {'key: "alice"
+                  ,     'caps:  [
+                                 (coin.TRANSFER "k:alice" "c:J_9VEDfyu4PaZ_fzvDOKI5TiJ6miimaTgbDt396fdY8" 200.0)
+                                 ]         }
+           ])
+(dab.bonder.lock "LOCKUP_SALE-3" (floor (days 730)) 200.0 "k:alice")
+(expect "Gas cost of a lockup creation" 1481 (env-gas))
+
+
+(dab.bonder.read-bond "LOCKUP_SALE-3")
+(expect "Alice's lockup was correctly included on the table and computed in the active users"
+        true (and (not (dab.bonder.can-account-bond "k:alice" "LOCKUP_SALE-3")) (= 1 (at 'active-bonders (dab.bonder.read-bond "LOCKUP_SALE-3")))))
+(let* (
+       (lockup-summary (summarizer.compute-lockup-summary (dab.bonder.read-lockup (dab.bonder.get-lockup-key "LOCKUP_SALE-3" "k:alice"))))
+       (bond-summary (summarizer.compute-bond-summary (dab.bonder.read-bond "LOCKUP_SALE-3")))
+       )
+  (expect "Alices's current ROI is currently at 1" true (= (at 'predicted-roi lockup-summary) 1.0))
+  )
+(commit-tx)
+
+
+
+(begin-tx "Bob Lock on Toms's bond")
+(env-chain-data {"block-time": (time "2024-01-12T20:59:00Z")})
+(env-sigs [
+           {'key: "bob"
+                  ,     'caps:  [
+                                 (coin.TRANSFER "k:bob" "c:J_9VEDfyu4PaZ_fzvDOKI5TiJ6miimaTgbDt396fdY8" 200.0)
+                                 ]         }
+           ])
+(dab.bonder.lock "LOCKUP_SALE-3" (floor (days 365)) 200.0 "k:bob")
+(expect "Gas cost of a lockup creation" 1479 (env-gas))
+
+(dab.bonder.read-bond "LOCKUP_SALE-3")
+(expect "Alice's lockup was correctly included on the table and computed in the active users"
+        true (and (not (dab.bonder.can-account-bond "k:bob" "LOCKUP_SALE-3")) (= 2 (at 'active-bonders (dab.bonder.read-bond "LOCKUP_SALE-3")))))
+;;NOTE: Bob is locking the same amount as Alice on a different tier. One that gives half the rewards
+(let* (
+       (alice-lockup-summary (summarizer.compute-lockup-summary (dab.bonder.read-lockup (dab.bonder.get-lockup-key "LOCKUP_SALE-3" "k:alice"))))
+       (bob-lockup-summary (summarizer.compute-lockup-summary (dab.bonder.read-lockup (dab.bonder.get-lockup-key "LOCKUP_SALE-3" "k:bob"))))
+       (bond-summary (summarizer.compute-bond-summary (dab.bonder.read-bond "LOCKUP_SALE-3")))
+       )
+  (expect "Bob's max rewards should be half of Alice's" 0.5 (/ (at 'max-kda-rewards bob-lockup-summary) (at 'max-kda-rewards alice-lockup-summary)))
+  (expect "Bob's current ROI is currently at 1" true (= (at 'predicted-roi bob-lockup-summary) 1.0))
+  )
+(commit-tx)
+
+
+
+(begin-tx "Testing privileged actions - aggregate interactions")
+(env-keys [])
+
+(expect-failure
+ "Cannot aggregate without privileges"
+ "Tx Failed: Could not obtain privilege on action aggregate-interaction"
+ (dab.bonder.add-user-interaction "LOCKUP_SALE-2" "k:bob"))
+
+(expect-failure
+ "Cannot aggregate without privileges"
+ "Tx Failed: Could not obtain privilege on action aggregate-interaction"
+ (dab.bonder.add-new-poll "LOCKUP_SALE-1"))
+
+(expect-failure
+ "Only operator can grant privileges"
+ "(keyset-ref-guard 'alice): Failure: Keyset reference cannot be found: alice"
+ (dab.bonder.grant-privilege 'aggregate-interaction (keyset-ref-guard 'alice)))
+
+(env-keys ["operate"])
+(dab.bonder.grant-privilege (read-keyset 'alice) 'aggregate-interaction)
+(env-keys ["alice"])
+
+;; NOTE: Bob's participation rate on Alice's bond will be 1/4
+(map  (lambda (x) (dab.bonder.add-new-poll "LOCKUP_SALE-2")) ["a", "b" , "c" , "d"])
+(dab.bonder.add-user-interaction "LOCKUP_SALE-2" "k:bob")
+
+;;NOTE: Alice's participation on Tom's bond will be 20% and Bob's will be 40%
+(map (lambda (x) (dab.bonder.add-new-poll "LOCKUP_SALE-3")) ["a", "b" , "c" , "d", "e"])
+(dab.bonder.add-user-interaction "LOCKUP_SALE-3" "k:alice")
+(dab.bonder.add-user-interaction  "LOCKUP_SALE-3" "k:bob")
+(dab.bonder.add-user-interaction  "LOCKUP_SALE-3" "k:bob")
+
+;;NOTE: In this first moment, Tom and Alice will have participation rate = 1 on Bob's bond.
+(dab.bonder.add-new-poll "LOCKUP_SALE-1")
+(dab.bonder.add-user-interaction "LOCKUP_SALE-1" "k:alice")
+(dab.bonder.add-user-interaction  "LOCKUP_SALE-1" "k:tom")
+(commit-tx)
+
+(begin-tx "Lookup existing lockups on Bob's bond")
+;; NOTE: Now that there was only one poll and both tom and alice interacted with it, they should be earning maximum rewards
+(let* (
+       (tom-lockup-summary (summarizer.compute-lockup-summary (dab.bonder.read-lockup (dab.bonder.get-lockup-key "LOCKUP_SALE-1" "k:tom"))))
+       (alice-lockup-summary (summarizer.compute-lockup-summary (dab.bonder.read-lockup (dab.bonder.get-lockup-key "LOCKUP_SALE-1" "k:alice"))))
+       )
+  (expect "Alice will earn max rewards" true (= (at 'predicted-roi alice-lockup-summary) (at 'max-roi alice-lockup-summary)))
+  (expect "Tom will earn max rewards" true (= (at 'predicted-roi tom-lockup-summary) (at 'max-roi tom-lockup-summary)))
+  )
+(commit-tx)
+
+
+(begin-tx "Lookup Bob's lockup on Alice's bond")
+;; NOTE: Alice's bond does not consider participation to give out rewards. So just by participating once Bob is entitled for full rewards
+(let* (
+       (bob-lockup (dab.bonder.read-lockup (dab.bonder.get-lockup-key "LOCKUP_SALE-2" "k:bob")))
+       (bob-lockup-summary (summarizer.compute-lockup-summary bob-lockup))
+       )
+  (expect "Bob will have 25 percent participation rate"  (/ (dec 1) (dec 4)) (/ (dec (at 'interactions bob-lockup-summary)) (dec (at 'total-polls bob-lockup-summary))))
+  (expect "Bob will earn max rewards" true (= (at 'predicted-roi bob-lockup-summary) (at 'max-roi bob-lockup-summary)))
+  )
+(commit-tx)
+
+
+(begin-tx "Lookup Alice's and Bob's lockup on Toms's bond")
+;; NOTE: Tom's bond only considers participation to give out rewards.
+(let* (
+       (tom-bond (dab.bonder.read-bond "LOCKUP_SALE-3"))
+       (alice-lockup (dab.bonder.read-lockup (dab.bonder.get-lockup-key "LOCKUP_SALE-3" "k:alice")))
+       (alice-lockup-summary (summarizer.compute-lockup-summary alice-lockup))
+       (bob-lockup (dab.bonder.read-lockup (dab.bonder.get-lockup-key "LOCKUP_SALE-3" "k:bob")))
+       (bob-lockup-summary (summarizer.compute-lockup-summary bob-lockup))
+       )
+  (expect "Alice will have 20 percent participation rate"  (/ (dec 1) (dec 5)) (/ (dec (at 'interactions alice-lockup-summary)) (dec (at 'total-polls alice-lockup-summary))))
+  (expect "Alice will earn 20 percent of the rewards" true (=  (at 'predicted-kda-rewards alice-lockup-summary) (* 0.2 (at 'max-kda-rewards alice-lockup-summary))))
+  (expect "Bob will have 40 percent participation rate" (/ (dec 2) (dec 5)) (/ (dec (at 'interactions bob-lockup-summary)) (dec (at 'total-polls bob-lockup-summary))))
+  (expect "Bob will earn 40 percent of the rewards" true (=  (at 'predicted-kda-rewards bob-lockup-summary) (* 0.4 (at 'max-kda-rewards bob-lockup-summary))))
+  (expect "Bob and alice will earn the same rewards" true (=  (at 'predicted-kda-rewards alice-lockup-summary) (at 'predicted-kda-rewards bob-lockup-summary)))
+  )
+(commit-tx)
+
+(begin-tx "Effects of a new poll being added")
+(env-keys ["alice"])
+(dab.bonder.add-user-interaction "LOCKUP_SALE-1" "k:alice")
+(dab.bonder.add-new-poll "LOCKUP_SALE-1")
+;; NOTE: Now Alice will remain earning max-rewards while Tom will be on the midpoint between max and min rewards
+(let* (
+       (tom-lockup-summary (summarizer.compute-lockup-summary (dab.bonder.read-lockup (dab.bonder.get-lockup-key "LOCKUP_SALE-1" "k:tom"))))
+       (alice-lockup-summary (summarizer.compute-lockup-summary (dab.bonder.read-lockup (dab.bonder.get-lockup-key "LOCKUP_SALE-1" "k:alice"))))
+       )
+  (expect "Alice will earn max rewards" true (= (at 'predicted-roi alice-lockup-summary) (at 'max-roi alice-lockup-summary)))
+  (expect "Tom will earn mid rewards" true (= (at 'predicted-roi tom-lockup-summary) (* 0.5 (+ (at 'max-roi tom-lockup-summary) (at 'min-roi tom-lockup-summary)))))
+  )
+(commit-tx)
+
+(begin-tx "Invalid Claim - Cannot claim others' rewards")
+(env-keys ["bob"])
+(test-capability (coin.CREDIT "bob"))
+(env-chain-data {"block-time": (time "2025-02-09T20:59:00Z")})
+(expect-failure "Only alice can claim her rewards" "Failure: Tx Failed: Keyset failure" (dab.bonder.claim "LOCKUP_SALE-1" "k:alice"))
+(commit-tx)
+
+(begin-tx "Invalid Claim - Cannot claim early")
+(env-chain-data {"block-time": (time "2024-03-09T20:59:00Z")})
+(env-keys ["alice"])
+(expect-failure "Still too early for alice to claim" "Tx Failed: Chain time must be at or after \"2024-04-11T20:59:00Z\"" (dab.bonder.claim "LOCKUP_SALE-1" "k:alice"))
+(dab.bonder.read-bond "LOCKUP_SALE-1")
+(commit-tx)
+
+(begin-tx "Alice Claim from Bob's bond")
+(env-chain-data {"block-time": (time "2025-10-09T20:59:00Z")})
+(env-sigs [
+           {'key: "alice"
+                  ,     'caps:  [
+                                 (dab.bonder.CLAIM "LOCKUP_SALE-1" "k:alice" 101.0 152.7625)
+                                 ]         }
+           {'key: "tom"
+                  ,     'caps:  [
+                                 (dab.bonder.CLAIM "LOCKUP_SALE-1" "k:tom"  1000.0 1773.75)
+                                 ]         }
+           ])
+(let*
+    (
+     (alice-lockup-summary (summarizer.compute-lockup-summary (dab.bonder.read-lockup (dab.bonder.get-lockup-key "LOCKUP_SALE-1" "k:alice"))))
+     (tom-lockup-summary (summarizer.compute-lockup-summary (dab.bonder.read-lockup (dab.bonder.get-lockup-key "LOCKUP_SALE-1" "k:tom"))))
+     (old-bank-balance (coin.get-balance "c:J_9VEDfyu4PaZ_fzvDOKI5TiJ6miimaTgbDt396fdY8"))
+     (old-alice-balance (coin.get-balance "k:alice"))
+     (old-tom-balance (coin.get-balance "k:tom"))
+     (bond-before (dab.bonder.read-bond "LOCKUP_SALE-1"))
+     )
+  (dab.bonder.claim "LOCKUP_SALE-1" "k:tom" )
+  (expect "Gas cost of a lockup claim" 1859 (env-gas))
+
+  (dab.bonder.claim "LOCKUP_SALE-1" "k:alice")
+  (expect "Gas cost of a 2nd lockup claim in same tx" 2996 (env-gas))
+
+  (let (
+        (new-bank-balance (coin.get-balance "c:J_9VEDfyu4PaZ_fzvDOKI5TiJ6miimaTgbDt396fdY8"))
+        (new-alice-balance (coin.get-balance "k:alice"))
+        (new-tom-balance (coin.get-balance "k:tom"))
+        (bond-after (dab.bonder.read-bond "LOCKUP_SALE-1"))
+        )
+    (expect "Alice got the correct amount of rewards from the bank" true (=  (- new-alice-balance old-alice-balance) (at 'predicted-kda-returns alice-lockup-summary)))
+    (expect "Tom got the correct amount of rewards from the bank" true (=  (- new-tom-balance old-tom-balance) (at 'predicted-kda-returns tom-lockup-summary)))
+    (expect "The bank balance behaved as expected" true (= (- old-bank-balance new-bank-balance) (+ (at 'predicted-kda-returns alice-lockup-summary) (at 'predicted-kda-returns tom-lockup-summary))))
+    (expect "There are no lockups left on the bond" 0 (at 'active-bonders bond-after))
+    ))
+(commit-tx)
+
+
+
+(begin-tx "Alice and Bob Claim from Tom's bond")
+(env-chain-data {"block-time": (time "2027-01-09T20:59:00Z")})
+(env-sigs [
+           {'key: "alice"
+                  ,     'caps:  [
+                                 (dab.bonder.CLAIM "LOCKUP_SALE-3" "k:alice" 200.0 240.0)
+                                 ]         }
+           {'key: "bob"
+                  ,     'caps:  [
+                                 (dab.bonder.CLAIM "LOCKUP_SALE-3" "k:bob" 200.0 240.0)
+                                 ]         }
+           ])
+(let*
+    (
+     (alice-lockup-summary (summarizer.compute-lockup-summary (dab.bonder.read-lockup (dab.bonder.get-lockup-key "LOCKUP_SALE-3" "k:alice"))))
+     (bob-lockup-summary (summarizer.compute-lockup-summary (dab.bonder.read-lockup (dab.bonder.get-lockup-key "LOCKUP_SALE-3" "k:bob"))))
+     (old-bank-balance (coin.get-balance "c:J_9VEDfyu4PaZ_fzvDOKI5TiJ6miimaTgbDt396fdY8"))
+     (old-alice-balance (coin.get-balance "k:alice"))
+     (old-bob-balance (coin.get-balance "k:bob"))
+     (bond-before (dab.bonder.read-bond "LOCKUP_SALE-3"))
+     )
+  (dab.bonder.claim "LOCKUP_SALE-3" "k:bob" )
+  (expect "Gas cost of a lockup claim" 1859 (env-gas))
+
+  (dab.bonder.claim "LOCKUP_SALE-3" "k:alice")
+  (expect "Gas cost of a 2nd lockup claim in same tx" 2996 (env-gas))
+
+  (let (
+        (new-bank-balance (coin.get-balance "c:J_9VEDfyu4PaZ_fzvDOKI5TiJ6miimaTgbDt396fdY8"))
+        (new-alice-balance (coin.get-balance "k:alice"))
+        (new-bob-balance (coin.get-balance "k:bob"))
+        (bond-after (dab.bonder.read-bond "LOCKUP_SALE-3"))
+        )
+    (expect "Alice got the correct amount of rewards from the bank" true (=  (- new-alice-balance old-alice-balance) (at 'predicted-kda-returns alice-lockup-summary)))
+    (expect "Bob got the correct amount of rewards from the bank" true (=  (- new-bob-balance old-bob-balance) (at 'predicted-kda-returns bob-lockup-summary)))
+    (expect "The bank balance behaved as expected" true (= (- old-bank-balance new-bank-balance) (+ (at 'predicted-kda-returns alice-lockup-summary) (at 'predicted-kda-returns bob-lockup-summary))))
+    (expect "There are no lockups left on the bond" 0 (at 'active-bonders bond-after))
+    ))
+(commit-tx)
+
+(begin-tx "Bob fails doing a second lockup on Alices's bond")
+(env-chain-data {"block-time": (time "2024-01-12T20:59:00Z")})
+(env-sigs [
+           {'key: "bob"
+                  ,     'caps:  [
+                                 (coin.TRANSFER "k:bob" "c:J_9VEDfyu4PaZ_fzvDOKI5TiJ6miimaTgbDt396fdY8" 500.0)
+                                 ]         }
+           ])
+
+(expect-failure
+ "Bob cannot lockup again before claiming"
+ "Cannot lock with an ongoing lockup"
+ (dab.bonder.lock "LOCKUP_SALE-2" (floor (days 365)) 500.0 "k:bob"))
+(commit-tx)
+
+
+(begin-tx "Bob Claim from Alice's bond")
+(env-chain-data {"block-time": (time "2035-01-20T20:59:00Z")})
+(env-sigs [
+           {'key: "bob"
+                  ,     'caps:  [
+                                 (dab.bonder.CLAIM "LOCKUP_SALE-2" "k:bob" 500.0 750.0)
+                                 ]         }
+           ])
+(let*
+    (
+     (bob-lockup-summary (summarizer.compute-lockup-summary (dab.bonder.read-lockup (dab.bonder.get-lockup-key "LOCKUP_SALE-2" "k:bob"))))
+     (old-bank-balance (coin.get-balance "c:J_9VEDfyu4PaZ_fzvDOKI5TiJ6miimaTgbDt396fdY8"))
+     (old-bob-balance (coin.get-balance "k:bob"))
+     (bond-before (dab.bonder.read-bond "LOCKUP_SALE-2"))
+     )
+  (dab.bonder.claim "LOCKUP_SALE-2" "k:bob")
+  (expect "Gas cost of a lockup claim" 1524 (env-gas))
+
+  (let (
+        (new-bank-balance (coin.get-balance "c:J_9VEDfyu4PaZ_fzvDOKI5TiJ6miimaTgbDt396fdY8"))
+        (new-bob-balance (coin.get-balance "k:bob"))
+        (bond-after (dab.bonder.read-bond "LOCKUP_SALE-2"))
+        )
+    (expect "Bob got the correct amount of rewards from the bank" true (=  (- new-bob-balance old-bob-balance) (at 'predicted-kda-returns bob-lockup-summary)))
+    (expect "The bank balance behaved as expected" true (= (- old-bank-balance new-bank-balance)  (at 'predicted-kda-returns bob-lockup-summary)))
+    (expect "There are no lockups left on the bond" 0 (at 'active-bonders bond-after))
+    ))
+(commit-tx)
+
+
+(begin-tx "Bob succeds in doing a second lockup on Alices's bond")
+(env-chain-data {"block-time": (time "2035-01-21T20:59:00Z")})
+(env-sigs [
+           {'key: "bob"
+                  ,     'caps:  [
+                                 (coin.TRANSFER "k:bob" "c:J_9VEDfyu4PaZ_fzvDOKI5TiJ6miimaTgbDt396fdY8" 500.0)
+                                 ]         }
+           ])
+(dab.bonder.lock "LOCKUP_SALE-2" (floor (days 365)) 500.0 "k:bob")
+(expect "Gas cost of a lockup creation" 1494 (env-gas))
+
+(expect "Bob did not interact after doing his second lockup" 0 (at 'interactions (dab.bonder.read-lockup (dab.bonder.get-lockup-key "LOCKUP_SALE-2" "k:bob"))))
+(commit-tx)
+
+
+
+(begin-tx "Test adding rewards to a bond")
+(env-sigs [
+           {'key: "alice"
+                  ,     'caps:  [
+                                 (coin.TRANSFER "k:alice" "c:J_9VEDfyu4PaZ_fzvDOKI5TiJ6miimaTgbDt396fdY8" 100.0)
+                                 (dab.bonder.MANAGE_BOND_REWARDS "LOCKUP_SALE-1" "k:alice" 100.0)
+                                 ]         }
+           ])
+
+(expect-failure
+ "Only the bond creator can add extra rewards"
+ "Failure: Managed capability not installed: (dab.bonder.MANAGE_BOND_REWARDS \"LOCKUP_SALE-1\" \"k:bob\" 10.0)"
+ (dab.bonder.add-bond-rewards "k:bob" "LOCKUP_SALE-1" 10.0))
+(expect "Gas cost of adding more rewards" 49 (env-gas))
+
+(env-sigs [
+           {'key: "bob"
+                  ,     'caps:  [
+                                 (coin.TRANSFER "k:bob" "c:J_9VEDfyu4PaZ_fzvDOKI5TiJ6miimaTgbDt396fdY8" 100.0)
+                                 (dab.bonder.MANAGE_BOND_REWARDS "LOCKUP_SALE-1" "k:bob" 100.0)
+                                 ]         }
+           ])
+(dab.bonder.add-bond-rewards "k:bob" "LOCKUP_SALE-1" 100.0)
+(expect "Gas cost of adding more rewards twice in same tx" 781 (env-gas))
+
+(commit-tx)
+
+(begin-tx "Test removing rewards from bond")
+(env-sigs [
+           {'key: "alice"
+                  ,     'caps:  [
+                                 (dab.bonder.MANAGE_BOND_REWARDS "LOCKUP_SALE-1" "k:alice" 1.0)
+                                 ]         }
+           ])
+
+(expect-failure
+ "Only the bond creator claim back rewards"
+ "Failure: Managed capability not installed: (dab.bonder.MANAGE_BOND_REWARDS \"LOCKUP_SALE-1\" \"k:bob\" 1.0)"
+ (dab.bonder.claim-back-rewards "LOCKUP_SALE-1" "k:bob" 1.0))
+
+(env-sigs [
+           {'key: "bob"
+                  ,     'caps:  [
+                                 (dab.bonder.MANAGE_BOND_REWARDS "LOCKUP_SALE-1" "k:bob" 1.0)
+                                 ]         }
+           ])
+(dab.bonder.claim-back-rewards "LOCKUP_SALE-1" "k:bob" 1.0)
+(expect "Gas cost of removing rewards" 866 (env-gas))
+
+(commit-tx)

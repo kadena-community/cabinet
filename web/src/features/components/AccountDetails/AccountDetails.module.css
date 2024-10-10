@@ -1,0 +1,66 @@
+/* AccountDetails.module.css */
+
+.infoCard {
+  padding: 1rem;
+  border: 1px solid #ccc; /* Adjust according to your theme */
+  border-radius: 20px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logoutIcon {
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  opacity: 0.6;
+}
+
+.logoutIcon:hover {
+  opacity: 1;
+}
+
+.accountGroupingRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 400;
+}
+
+.accountDataRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.accountControl {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  font-weight: 500;
+  font-size: 1.25rem;
+}
+
+.iconWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 8px;
+}
+
+.walletAction {
+  width: 100%;
+  font-weight: 400;
+  font-size: 0.825rem;
+  background: #222; /* Adjust according to your theme */
+  color: #ffffff; /* Adjust according to your theme */
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: center;
+}
+
+.walletAction:hover {
+  background: #333; /* Adjust according to your theme */
+}

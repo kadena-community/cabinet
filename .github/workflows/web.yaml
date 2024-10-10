@@ -1,0 +1,19 @@
+name: Cabinet Frontend Continuous Integration
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  frontend-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+      - name: build
+        run: |
+          cd web
+          yarn install --frozen-lockfile
+          yarn build

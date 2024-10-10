@@ -1,0 +1,35 @@
+'use client'
+import React from 'react';
+import { WalletEnum, useKadenaConnectors, getKadenaWalletForConnector } from '../connectors'; // Adjust the import path as needed
+
+export default function Page() {
+  // Assuming you want to show components for a specific wallet or all selectable wallets
+  // For demonstration, let's use EckoWallet as the selected wallet
+  const selectedWallet = WalletEnum.ECKO_WALLET;
+  const kadenaConnectors = useKadenaConnectors(selectedWallet);
+
+  // Render something based on the connected wallets
+  return (
+    <div>
+      <h1 className="text-3xl font-bold underline">Hello, Next.js!</h1>
+      <div>
+        {kadenaConnectors.length > 0 ? (
+          <div>
+
+
+            <h2>Available Wallets:</h2>
+            <ul>
+              {kadenaConnectors.map(([connector, hooks], index) => (
+                <li key={index}>
+                  Wallet: {getKadenaWalletForConnector(connector)} {/* This function needs to be imported as well */}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <p>No wallets connected.</p>
+        )}
+      </div>
+    </div>
+  );
+}

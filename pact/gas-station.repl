@@ -1,0 +1,258 @@
+;; disable Pact 4.4 changes until we update to using namespaced keysets
+;; the module code only enforces existing keysets and as long as we dont need
+;; to define a new keyset, we should be fine
+(env-exec-config ["DisablePact44"])
+(env-enable-repl-natives true) ;; enables usage of (print)
+
+(begin-tx)
+
+(load "root/fungible-v2.pact")
+(load "root/fungible-xchain-v1.pact")
+(load "root/coin.pact")
+
+;;Load utils Contract
+(env-data
+ { 'util-ns-users: ["util-ns-user"]
+                   , 'util-ns-admin: ["util-ns-admin"]
+                   })
+(env-keys ["util-ns-user", "util-ns-admin"])
+(load "./root/ns.pact")
+(load "root/gas-payer-v1.pact")
+;; Define Namespaces
+
+(env-data
+ { 'ns-admin-keyset: ["admin"]
+                     , 'ns-operate-keyset: ["operate"]
+                     , 'ns-genesis-keyset: { "keys": [], "pred": "="}
+                     , 'ns: "dab"
+                     , 'upgrade:false})
+
+(env-keys ["admin", "operate"])
+
+(define-namespace 'dab (read-keyset 'ns-admin-keyset) (read-keyset 'ns-genesis-keyset))
+
+
+(env-data {
+           'dab-ns-user: ["dab-user"]
+           , 'dab-ns-admin: ["dab-admin"]
+           , 'ns: "dab"
+           , 'upgrade: false
+           })
+
+(env-keys ["operate", "dab-admin", "dab-user"])
+
+
+
+(env-data
+ { 'bonder-admin: ["admin"]
+                  , 'bonder-ops: ["operate"]
+                  , 'ns: "dab"
+                  , 'upgrade: true})
+(env-keys ["admin", "operate"])
+
+(define-keyset "dab.bonder-admin" (read-keyset "bonder-admin"))
+
+
+(load "gas-guards.pact")
+(load "gas-station.pact")
+
+
+
+(commit-tx)
+
+;; Revert back to Pact 4.4 behavior
+(env-exec-config [])
+
+(begin-tx)
+(env-keys [])
+(use dab.gas-station)
+(use dab.gas-guards)
+
+(test-capability (coin.COINBASE))
+(coin.coinbase (GAS_STATION)
+               (guard-any
+                [
+                 (create-gas-payer-guard)
+                 (keyset-ref-guard "dab.bonder-admin")
+                 ]) 10.0)
+(commit-tx)
+
+;; SUCCESS CASE
+(begin-tx)
+(use dab.gas-station)
+
+(env-chain-data {
+                 "gas-price":  0.000000000001
+                 })
+(env-data {
+           "tx-type": "exec"
+           , "exec-code": ["(dab.some-function)"]
+           })
+
+(test-capability (coin.GAS))
+(test-capability (GAS_PAYER "user" 1 1.0))
+(expect
+ "buy gas succeeds"
+ "Write succeeded"
+ (coin.buy-gas (GAS_STATION) 1.0))
+(commit-tx)
+
+(begin-tx)
+(use dab.gas-station)
+;;more than one code
+(env-data {
+           "tx-type": "exec"
+           , "exec-code": ["(dab.some-function)", "(dab.another)"]
+           })
+
+(expect
+ "GAS_PAYER Cap granted"
+ "Capability acquired"
+ (test-capability (GAS_PAYER "user" 1 1.0)))
+
+(test-capability (coin.GAS))
+(test-capability (GAS_PAYER (GAS_STATION) 1 1.0))
+(expect
+ "buy-gas succeeds"
+ "Write succeeded"
+ (coin.buy-gas (GAS_STATION) 1.0))
+(commit-tx)
+
+;;FAILING CASES
+(begin-tx)
+(use dab.gas-station)
+
+(env-chain-data {
+                 "gas-price":  0.000000000001
+                 })
+
+;;mismatching namespace
+(env-data {
+           "tx-type": "exec"
+           , "exec-code": ["(free.some-function)"]
+           })
+
+(test-capability (coin.GAS))
+(expect-failure
+ "GAS_PAYER Cap not granted"
+ "only cab namespace on top level"
+ (test-capability (GAS_PAYER "user" 1 1.0)))
+
+(expect-failure
+ "buy-gas fails"
+ "None of the guards passed"
+ (coin.buy-gas (GAS_STATION) 1.0))
+
+;;mismatching tx-type
+(env-data {
+           "tx-type": "cont"
+           , "exec-code": ["(dab.some-function)"]
+           })
+
+(expect-failure
+ "GAS_PAYER Cap not granted"
+ "Inside an exec"
+ (test-capability (GAS_PAYER "user" 1 1.0)))
+
+(expect-failure
+ "buy-gas fails"
+ "None of the guards passed"
+ (coin.buy-gas (GAS_STATION) 1.0))
+
+;;too many codes
+(env-data {
+           "tx-type": "exec"
+           , "exec-code": ["(dab.some-function)", "(dab.another)", "(dab.another)", "(dab.another)", "(dab.another)", "(dab.another)"]
+           })
+
+(expect-failure
+ "GAS_PAYER Cap not granted"
+ "Tx has too many pact functions"
+ (test-capability (GAS_PAYER "user" 1 1.0)))
+
+(expect-failure
+ "buy-gas fails"
+ "None of the guards passed"
+ (coin.buy-gas (GAS_STATION) 1.0))
+
+;;high gas price
+(env-chain-data {
+                 "gas-price":  0.0000005
+                 })
+(env-data {
+           "tx-type": "exec"
+           , "exec-code": ["(dab.some-function)"]
+           })
+
+(expect-failure
+ "GAS_PAYER Cap not granted"
+ "Gas Price must be smaller than or equal to 0.0000001"
+ (test-capability (GAS_PAYER "user" 1 1.0)))
+
+(expect-failure
+ "buy-gas fails"
+ "None of the guards passed"
+ (coin.buy-gas (GAS_STATION) 1.0))
+
+;;high gas limit
+(env-chain-data {
+                 "gas-price":  0.000000000001,
+                 "gas-limit":  150000
+                 })
+(env-data {
+           "tx-type": "exec"
+           , "exec-code": ["(dab.some-function)"]
+           })
+
+(expect-failure
+ "GAS_PAYER Cap not granted"
+ "Gas Limit must be smaller than or equal to 100000"
+ (test-capability (GAS_PAYER "user" 1 1.0)))
+
+(expect-failure
+ "buy-gas fails"
+ "None of the guards passed"
+ (coin.buy-gas (GAS_STATION) 1.0))
+
+(commit-tx)
+
+;;BUY GAS FAILING CASE SUCCEEDS WITH ADMIN KEY
+(begin-tx)
+(use dab.gas-station)
+
+(env-chain-data {
+                 "gas-price":  0.000000000002
+                 })
+
+(env-data {
+           "tx-type": "cont"
+           , "exec-code": ["(dab.some-function)", "(+ 1 2)"]
+           })
+
+(test-capability (coin.GAS))
+(expect-failure
+ "GAS_PAYER Cap not granted"
+ "Inside an exec"
+ (test-capability (GAS_PAYER "user" 1 1.0)))
+
+(expect-failure
+ "buy-gas fails"
+ "None of the guards passed"
+ (coin.buy-gas (GAS_STATION) 1.0))
+
+;;insert admin key
+(env-keys ["admin"])
+(expect
+ "buy-gas succeeds without GAS_PAYER"
+ "Write succeeded"
+ (coin.buy-gas (GAS_STATION) 1.0))
+
+;; rotate succeeds
+(env-sigs [{
+            "key": "admin",
+            "caps": [(coin.ROTATE (GAS_STATION))]
+            }])
+(coin.rotate (GAS_STATION) (keyset-ref-guard "dab.bonder-admin"))
+
+(commit-tx)
+(print "CI OK")

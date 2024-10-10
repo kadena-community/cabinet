@@ -1,0 +1,23 @@
+networkId: {{{network}}}
+signers:
+  - public: {{{admin-pk}}}
+    caps:
+      - name: coin.GAS
+        args: []
+      - name: coin.TRANSFER
+        args: ["{{{admin-account}}}", "bonder-bank", 2000.0]
+  - public: {{{admin-pk}}}
+data:
+  ns: "{{{ns}}}"
+  ns-admin-keyset:
+    keys:
+    - {{{admin-pk}}}
+    pred: keys-all
+publicMeta:
+  chainId: "{{{chain}}}"
+  gasLimit: 100000
+  ttl: 7200
+  sender: {{{admin-account}}}
+  gasPrice: 0.000001
+code: |+
+  (dab.bonder.add-bond-creator "{{{admin-account}}}")

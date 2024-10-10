@@ -1,0 +1,16 @@
+networkId: {{{network}}}
+signers:
+  - public: {{{user-pk}}}
+    caps:
+      - name: coin.GAS
+        args: []
+      - name: {{{ns}}}.poller.ACCOUNT_GUARD
+        args: ["{{{user-account}}}"]
+publicMeta:
+  chainId: "{{{chain}}}"
+  gasLimit: 150000
+  ttl: 7200
+  sender: {{{user-account}}}
+  gasPrice: 0.000001
+code: |+
+  ({{{ns}}}.poller.vote-approved "{{{user-account}}}" (at 'poll-id (at 0 ({{{ns}}}.poller.read-active-polls))))

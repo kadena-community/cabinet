@@ -1,0 +1,20 @@
+networkId: {{{network}}}
+signers:
+  - public: {{{user-pk}}}
+    caps:
+      - name: coin.GAS
+        args: []
+      - name: coin.TRANSFER
+        args: ["{{{user-account}}}",  "bonder-bank", 50.0]
+publicMeta:
+  chainId: "{{{chain}}}"
+  gasLimit: 100000
+  ttl: 7200
+  sender: {{{user-account}}}
+  gasPrice: 0.000001
+code: |+
+  (dab.bonder.lock
+    (at 'bond-id (at 0 (dab.bonder-utils.read-all-bonds)))
+    (at 'option-length (at 0 (reverse (at 'lockup-options (at 0 (dab.bonder-utils.read-all-bonds))))))
+    50.0
+    "{{{user-account}}}")

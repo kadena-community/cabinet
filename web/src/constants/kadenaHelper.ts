@@ -1,0 +1,13 @@
+import { KADENA_CHAIN_ID } from "./chainInfo";
+
+export const GAS = {
+  ACC_DETAIL: { PRICE: 0.00000001, LIMIT: 3000 },
+  VOTE: { PRICE: 0.00000001, LIMIT: 3000 },
+};
+
+export const KADENA_TX_CONFIG = {
+  TTL: 28800,
+  GAS_LIMIT: 3000,
+  GAS_PRICE: 0.000001,
+  CHAIN_ID: KADENA_CHAIN_ID,
+};

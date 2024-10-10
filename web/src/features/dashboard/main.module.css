@@ -1,0 +1,39 @@
+.dashboardContainer {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* Three columns for top stats */
+  gap: 1rem; /* Space between cards */
+  margin-bottom: 1rem; /* Space above the last locks */
+}
+
+.statCard {
+  background-color: #2c2c2c;
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #fff;
+}
+
+.lastLocksContainer {
+  grid-column: span 3; /* Span across all three columns */
+  padding: 1rem;
+}
+
+.lockCard {
+  background-color: #2c2c2c;
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+  color: #fff;
+  text-decoration: none; /* Removes underline from links */
+  display: block;       /* Makes the link block-level to fill the card */
+}
+
+/* You may need to adjust the media queries for responsiveness */
+@media (max-width: 768px) {
+  .dashboardContainer {
+    grid-template-columns: 1fr; /* Stack them on smaller screens */
+  }
+}

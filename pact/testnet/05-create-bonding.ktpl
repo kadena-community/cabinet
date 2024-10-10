@@ -1,0 +1,32 @@
+networkId: {{{network}}}
+signers:
+  - public: {{{bond-adm-pk}}}
+    caps:
+      - name: coin.GAS
+        args: []
+      - name: coin.TRANSFER
+        args: ["{{{bond-adm-acc}}}", "c:RTbiMdAGdrdZcCiQ8q5KC8h9BFa--BmoY-0RVEB7m0I", 3000.0]
+data:
+  ns: "{{{ns}}}"
+publicMeta:
+  chainId: "{{{chain}}}"
+  gasLimit: 100000
+  ttl: 7200
+  sender: {{{bond-adm-acc}}}
+  gasPrice: 0.000001
+code: |+
+  (let (
+      (tier-a { 'option-name: "5 days", 'option-length: (floor (days 5)) , 'time-multiplier: 1.0 , 'poller-max-boost: 1.0104 , 'polling-power-multiplier: 10.0 })
+      (tier-b { 'option-name: "10 days", 'option-length: (floor (days 10)), 'time-multiplier: 1.0 , 'poller-max-boost: 1.0325 , 'polling-power-multiplier: 20.0 })
+      (tier-c { 'option-name: "15 days", 'option-length: (floor (days 15)), 'time-multiplier: 1.0 , 'poller-max-boost: 1.0575 , 'polling-power-multiplier: 40.0 })
+      (tier-d { 'option-name: "20 days", 'option-length: (floor (days 20)), 'time-multiplier: 1.0 , 'poller-max-boost: 1.0725 , 'polling-power-multiplier: 80.0 })
+
+      )
+  ({{{ns}}}.bonder.create-bond (add-time (at 'block-time (chain-data)) (minutes 1))
+                          [tier-a tier-b tier-c tier-d]
+                          []
+                          20.0
+                          100000.0
+                          1.00
+                          "{{{bond-adm-acc}}}"
+                          3000.0))

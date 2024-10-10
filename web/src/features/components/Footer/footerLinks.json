@@ -1,0 +1,82 @@
+{
+  "socialLinks": [
+    { "title": "Twitter", "url": "https://twitter.com/kadena_io", "icon": "FaTwitter" },
+    { "title": "YouTube", "url": "https://www.youtube.com/kadenablockchain", "icon": "FaYoutube" },
+    { "title": "LinkedIn", "url": "https://www.linkedin.com/company/kadena-llc", "icon": "FaLinkedin" },
+    { "title": "Discord", "url": "https://discord.com/invite/kadena", "icon": "FaDiscord" },
+    { "title": "GitHub", "url": "https://github.com/kadena-io", "icon": "FaGithub" },
+    { "title": "Reddit", "url": "https://www.reddit.com/r/kadena/", "icon": "FaReddit" }
+  ],
+  "mainLinks": [
+    {
+      "section": "Technology",
+      "links": [
+        { "title": "Chainweb", "url": "https://kadena.io/chainweb" },
+        { "title": "Pact", "url": "https://kadena.io/pact" },
+        { "title": "ZK Proofs", "url": "https://kadena.io/zero-knowledge-proofs" },
+        { "title": "Marmalade", "url": "https://kadena.io/marmalade" },
+        { "title": "SpireKey", "url": "https://kadena.io/spirekey" },
+        { "title": "DeFi", "url": "https://kadena.io/defi" },
+        { "title": "Why Proof of Work", "url": "https://kadena.io/why-proof-of-work" }
+      ]
+    },
+    {
+      "section": "Solutions",
+      "links": [
+        { "title": "Tokenization", "url": "https://kadena.io/business-solutions" },
+        { "title": "Stablecoins", "url": "https://kadena.io/business-solutions" },
+        { "title": "Real World Assets", "url": "https://kadena.io/business-solutions" },
+        { "title": "Lending", "url": "https://kadena.io/business-solutions" },
+        { "title": "DeFi", "url": "https://kadena.io/business-solutions" }
+      ]
+    },
+    {
+      "section": "About",
+      "links": [
+        { "title": "Company", "url": "https://kadena.io/our-company" },
+        { "title": "Leadership", "url": "https://kadena.io/leadership" },
+        { "title": "Perspectives", "url": "https://kadena.io/perspectives" },
+        { "title": "Whitepapers", "url": "https://kadena.io/whitepapers" },
+        { "title": "FAQs", "url": "https://kadena.io/faq" }
+      ]
+    },
+    {
+      "section": "Build",
+      "links": [
+        { "title": "Tools", "url": "https://kadena.io/tools" },
+        { "title": "Developer Docs", "url": "https://docs.kadena.io/" },
+        { "title": "Academy", "url": "https://kadena.io/academy" },
+        { "title": "Grants", "url": "https://kadena.io/grants" }
+      ]
+    },
+    {
+      "section": "Participate",
+      "links": [
+        { "title": "Community", "url": "https://kadena.io/community" },
+        { "title": "Project Ecosystem", "url": "https://kadena.io/ecosystem" },
+        { "title": "KDA Token", "url": "https://kadena.io/kda-token" },
+        { "title": "Kadena Cabinet", "url": "https://kadena.io/cabinet" },
+        { "title": "Beyond the Block", "url": "https://kadena.io/beyond-the-block" },
+        { "title": "Kadena Connect", "url": "https://kadena.io/connect" }
+      ]
+    }
+  ],
+  "bottomLinks": [
+    {
+      "title": "Terms and Conditions",
+      "url": "https://kadena.io/terms-and-conditions"
+    },
+    {
+      "title": "Privacy Policy",
+      "url": "https://kadena.io/privacy-policy"
+    },
+    {
+      "title": "Media Kit",
+      "url": "https://kadena.io/media-kit"
+    },
+    {
+      "title": "Careers",
+      "url": "https://boards.greenhouse.io/kadenallc"
+    }
+  ]
+}

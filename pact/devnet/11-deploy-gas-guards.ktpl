@@ -1,0 +1,22 @@
+codeFile: ../gas-guards.pact
+networkId: {{{network}}}
+signers:
+  - public: {{{admin-pk}}}
+    caps:
+      - name: coin.GAS
+        args: []
+  - public: {{{ns-admin-pk}}}
+  - public: {{{admin-pk}}}
+data:
+  ns: "{{{ns}}}"
+  upgrade: {{{upgrade}}}
+  ns-admin-keyset:
+    keys:
+    - {{{admin-pk}}}
+    pred: keys-all
+publicMeta:
+  chainId: "{{chain}}"
+  gasLimit: 100000
+  ttl: 7200
+  sender: {{{admin-account}}}
+  gasPrice: 0.000001

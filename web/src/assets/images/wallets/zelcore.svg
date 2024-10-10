@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="72" height="72" viewBox="10 7 50 50">
+  <defs>
+    <filter id="Ellipse_65" x="0" y="0" width="72" height="72" filterUnits="userSpaceOnUse">
+      <feOffset dy="4" input="SourceAlpha"/>
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feFlood flood-opacity="0.251"/>
+      <feComposite operator="in" in2="blur"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="linear-gradient-zelcore" x1="0.516" y1="1" x2="0.516" gradientUnits="objectBoundingBox">
+      <stop offset="0" stop-color="#9604cf"/>
+      <stop offset="1" stop-color="#142c88"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient-zelcore-2" x1="0.995" y1="1.828" x2="0.001" y2="1.828" gradientUnits="objectBoundingBox">
+      <stop offset="0" stop-color="#4171f7"/>
+      <stop offset="1" stop-color="#f74bda"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient-zelcore-3" x1="0.129" y1="2.404" x2="0.752" y2="2.185" gradientUnits="objectBoundingBox">
+      <stop offset="0" stop-color="#fff" stop-opacity="0"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0.4"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient-zelcore-4" x1="0.087" y1="2.152" x2="0.879" y2="2.384" gradientUnits="objectBoundingBox">
+      <stop offset="0" stop-color="#231f20" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="#231f20" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient-zelcore-5" y1="0.5" x2="1" y2="0.5" gradientUnits="objectBoundingBox">
+      <stop offset="0" stop-color="#fff"/>
+      <stop offset="1" stop-color="#ebe9fb"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient-zelcore-6" x1="0.331" y1="2.547" x2="0.61" y2="3.347" gradientUnits="objectBoundingBox">
+      <stop offset="0" stop-color="#eae8fc"/>
+      <stop offset="1" stop-color="#eae9f0"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient-zelcore-7" x1="0.636" y1="2.694" x2="0.364" y2="3.349" gradientUnits="objectBoundingBox">
+      <stop offset="0" stop-color="#dad4f4"/>
+      <stop offset="1" stop-color="#f0f0f0"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient-zelcore-8" x1="0.197" y1="0.133" x2="0.719" y2="0.764" gradientUnits="objectBoundingBox">
+      <stop offset="0" stop-color="#eae8fc"/>
+      <stop offset="1" stop-color="#f0f0f0"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient-zelcore-10" y1="0.5" x2="1" y2="0.5" gradientUnits="objectBoundingBox">
+      <stop offset="0" stop-color="#f7f6fa"/>
+      <stop offset="1" stop-color="#ebe9fb"/>
+    </linearGradient>
+  </defs>
+  <g id="Frame" transform="translate(12 8)">
+    <path id="Ellipse_64" data-name="Ellipse 64" d="M48,24A24,24,0,1,1,24,0,24,24,0,0,1,48,24Z" fill="#2b61d1"/>
+    <g id="Group_179" data-name="Group 179">
+      <path id="Path_73" data-name="Path 73" d="M8.594,3.409,5.864,5,0,1.588,2.663.039,2.73,0l.1.059Z" transform="translate(18.282 34.548)" fill="#fff"/>
+      <path id="Path_74" data-name="Path 74" d="M26.415,7.679v3.2L20.643,7.519l-1.565-.91-1.565.91-7.337,4.267-1.565.91v1.882L5.786,12.937l-1.565-.91-1.565.91L0,14.48v-6.8L13.207,0Z" transform="translate(10.939 8.828)" fill="#fff"/>
+      <path id="Path_75" data-name="Path 75" d="M14.675,4.268V12.8L7.338,17.068l-.01-.006L0,12.8V4.268L7.338,0Z" transform="translate(22.679 19.077)" fill="#fff"/>
+      <path id="Path_76" data-name="Path 76" d="M8.441,2.453V7.36L4.221,9.816,0,7.36V2.453L4.221,0Z" transform="translate(10.939 24.497)" fill="#fff"/>
+    </g>
+    <g id="Group_54097" data-name="Group 54097">
+      <g transform="matrix(1, 0, 0, 1, -12, -8)" filter="url(#Ellipse_65)">
+        <path id="Ellipse_65-2" data-name="Ellipse 65" d="M48,24A24,24,0,1,1,24,0,24,24,0,0,1,48,24Z" transform="translate(12 8)" fill="#fff"/>
+      </g>
+      <path id="Ellipse_64-2" data-name="Ellipse 64" d="M42.182,21.091A21.091,21.091,0,1,1,21.091,0,21.091,21.091,0,0,1,42.182,21.091Z" transform="translate(2.909 2.909)" fill="#2b61d1"/>
+      <g id="Group_179-2" data-name="Group 179">
+        <path id="Path_73-2" data-name="Path 73" d="M7.552,3l-2.4,1.4L0,1.4,2.34.035,2.4,0l.089.052Z" transform="translate(18.976 33.27)" fill="#fff"/>
+        <path id="Path_74-2" data-name="Path 74" d="M23.213,6.748V9.557L18.141,6.608l-1.376-.8-1.376.8L8.941,10.357l-1.376.8v1.654L5.085,11.369l-1.376-.8-1.376.8L0,12.725V6.748L11.607,0Z" transform="translate(12.522 10.667)" fill="#fff"/>
+        <path id="Path_75-2" data-name="Path 75" d="M12.9,3.751v7.5L6.448,15l-.009-.005L0,11.25v-7.5L6.448,0Z" transform="translate(22.839 19.673)" fill="#fff"/>
+        <path id="Path_76-2" data-name="Path 76" d="M7.418,2.156V6.468L3.709,8.626,0,6.468V2.156L3.709,0Z" transform="translate(12.522 24.436)" fill="#fff"/>
+      </g>
+      <g id="Group_69395" data-name="Group 69395">
+        <g id="Group_69392" data-name="Group 69392">
+          <g id="Group_69394" data-name="Group 69394">
+            <circle id="Ellipse_3149" data-name="Ellipse 3149" cx="22.545" cy="22.545" r="22.545" transform="translate(1.455 1.455)" fill="url(#linear-gradient-zelcore)"/>
+          </g>
+          <g id="Group_68663">
+            <g id="logo_zelcore_1" data-name="logo_zelcore 1" transform="translate(7.273 10.182)">
+              <path id="Vector" d="M0,19.416l11.094,6.477,11.094-6.477V6.47L11.094,0,0,6.47Z" transform="translate(6.353 0)" fill="url(#linear-gradient-zelcore-2)"/>
+              <path id="Vector-2" data-name="Vector" d="M0,12.915l11.086,6.47V6.47L0,0Z" transform="translate(6.353 6.502)" opacity="0.56" fill="url(#linear-gradient-zelcore-3)"/>
+              <path id="Vector-3" data-name="Vector" d="M11.094,0,0,6.477V19.392l.008.008L11.1,12.923V.008Z" transform="translate(17.438 6.494)" opacity="0.56" fill="url(#linear-gradient-zelcore-4)"/>
+              <path id="Vector-4" data-name="Vector" d="M0,4.533,7.774,0l7.774,4.533V13.6L7.774,18.142,0,13.6Z" transform="translate(19.362 9.494)" fill="#f0f0f0"/>
+              <path id="Vector-5" data-name="Vector" d="M0,4.533,7.774,0l7.774,4.533V13.6L7.774,18.142,0,13.6Z" transform="translate(19.362 9.494)" fill="#fff"/>
+              <path id="Vector-6" data-name="Vector" d="M7.774,0l7.774,4.533L7.774,9.067,0,4.533Z" transform="translate(19.362 9.494)" fill="url(#linear-gradient-zelcore-5)"/>
+              <path id="Vector-7" data-name="Vector" d="M0,0,7.774,4.533v9.075L0,9.067Z" transform="translate(19.362 14.028)" fill="url(#linear-gradient-zelcore-6)"/>
+              <path id="Vector-8" data-name="Vector" d="M0,4.533,7.774,0V9.067L0,13.609Z" transform="translate(27.136 14.028)" fill="url(#linear-gradient-zelcore-7)"/>
+              <path id="Vector-9" data-name="Vector" d="M0,4.533,7.774,0l7.774,4.533V13.6L7.774,18.142,0,13.6Z" transform="translate(0 9.494)" fill="#f0f0f0"/>
+              <path id="Vector-10" data-name="Vector" d="M0,0,7.774,4.533v9.075L0,9.067Z" transform="translate(0 14.028)" fill="url(#linear-gradient-zelcore-8)"/>
+              <path id="Vector-11" data-name="Vector" d="M0,4.533,7.774,0V9.067L0,13.609Z" transform="translate(7.774 14.028)" fill="url(#linear-gradient-zelcore-7)"/>
+              <path id="Vector-12" data-name="Vector" d="M7.774,0l7.774,4.533L7.774,9.067,0,4.533Z" transform="translate(0 9.494)" fill="url(#linear-gradient-zelcore-10)"/>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

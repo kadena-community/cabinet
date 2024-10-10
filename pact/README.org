@@ -1,0 +1,446 @@
+#+TITLE: Smart Contract Documentation
+
+Welcome to the Kadena Cabinet Smart Contract Documentation. This guide aims to provide a comprehensive understanding of the inner workings of our platform.
+Whether you're a developer looking to delve into the specifics of our smart contracts or a user wanting to understand how our system operates,
+this documentation will be your essential resource.
+
+
+* Bonder Contract Documentation
+
+** Overview
+
+The Bonder contract is designed for managing Kadena (KDA) token transactions and regulating everything regarding the
+financial aspects of the platform, including reward distribution. Due to the current state of pact formal verification, the contract was split in two parts.
+The bonder contract can easily be adjusted to become formally verifiable and contains all the sensible functions, variables,
+and capabilities that manage funds. It offers functionalities such as bond creation, reward management, token locking for yield,
+tracking participation metrics, and claiming lockups. The bonder-utils contract contains functions that don't work well with formal
+verification. We intend to use such functions only for read-type local calls and as of now the bonder-utils contract will only work
+when interacting with nodes having the `AllowReadsOnLocal` option activated.
+
+** Operational Mechanics
+
+    *Token Management*: The Bonder contract acts as a custodian of KDA tokens, holding them on behalf of users and bond creators. It autonomously tracks and manages each user's token position and associated rewards.
+
+    *Main Entrypoints*: Core functionalities of this contract are accessible through the =create-bond=, =lock=, and =claim= functions. These entry points facilitate bond creation, token locking for yield accrual, and claiming of accrued rewards, respectively.
+
+** Schemas and Tables
+
+   - =contract-lock-status=: Tracks the lock status of the contract.
+   - =lockup-option=: Tracks the lockup options and their corresponding properties.
+   - =bond-sale=: Records bond sales created by the contract operator.
+   - =lockup=: Tracks KDA bonding positions of the Bonder contract's users.
+   - =bond-creator=: Tracks accounts allowed to create a bond.
+   - =keys-schema=: Schema for storing table keys and optimizing gas consumption.
+   - =privilege=: Schema for defining privileges.
+
+** Key Functionalities
+
+- *Bond Creation*: Agents authorized by the contract operator can create bond sales through the =create-bond= function, offering KDA rewards as incentives.
+
+- *Token Locking for Yield*: Users can lock their KDA tokens in the contract using the =lock= function, enabling them to accrue yield rewards over time. When a user creates a new lockup, the maximum rewards they can earn are calculated and removed from the respective bond's available rewards. Based on the user's participation rate (note that there will be no rewards if no poll is created during the lockup period), they will receive a proportional part of their reserved rewards, with the remainder returning to the available rewards pool. Additionally, when a user creates a new lockup, the =polls-at-lock= field in the =lockup= schema will record the number of existing polls for that bond at the time of lockup. This ensures that the rewards for new lockups are independent of any previous ones.
+
+- *Managing Participation Metrics*: Users participating in governance polls can boost their Annual Percentage Rate (APR). The functions that are fundamental to compute the boost are the =increment-bonder-interactions= and =increment-bond-polls= functions. These are secured so that they can only be called by the poller contract.
+
+- *Claiming Lockups*: After locking their KDA and participating on the proposed polls, users can claim their original amounts with their rightful rewards. It is important to note that users can lock their KDA again in the same bond only after claiming the rewards from previous lockups.
+
+- *Reward Management*: The =claim-back-rewards= and =add-bond-rewards= functions allow the bond creator to manage rewards. If the program if giving good results but is running out of rewards, the creator can add extra rewards, which will open extra spots for more users. On the other hand, the creator can get the available rewards back. The latter will not affect existing positions but may close the program for new users.
+
+** Reward Computation Details
+
+When a bond is created, there are lockup tiers that are determined by the creator. Each tier has the following properties:
+
+- =option-length=: Amount of time that the users kda will be locked. E.g (days 3)
+- =time-multiplier=: APR boost for locking in this tier. E.g 1.1
+- =poller-max-boost=: Maximum APR boost for poll participation. E.g 1.05
+- =polling-power-multiplier= : Factors into the polling power computation. E.g 2.0
+
+Additionally, the bond has the =base-apr= (e.g 1.05) global parameter and for each user on that bond we record the participation-rate parameter.  When a user locks an amount =x= of KDA on a tier, the amount they get back after =option-length= time is:
+
+=claim = x * base-apr * time-multiplier * (poller-max-boost * participation-rate + 1 * ( 1 - participation-rate - polls-at-lock))=
+
+Where =polls-at-lock= is the number of polls associated with the bond at lock time.
+
+The total rewards earned by the user can be computed as
+=claim - x=
+
+And the earnings rate is given by
+
+=(claim / x) -1=
+
+TL;DR: The user gets maximum APR when they lock in the tier having the biggest =time-multiplier * poller-max-boost= (would normally be the longest one) and participates in all the polls. So in each bond the APR cap would be
+
+=base-apr * MAX_time-multiplier * poller-max-boost=
+
+The polling power (used for voting on polls) is computed as =x * polling-power-multiplier=
+
+*** Examples
+
+Similarly to what we are doing on the =bonder.repl= file, let us take a quick look at three totally distinct types of bonds that are supported by our contract
+
+
+**** Example 1: Valid Bond Creation - A Bond Weighting Rewards and Participation
+
+In this example, a bond is created with parameters that significantly influence reward computation based on both the bond's duration and the participants' activities.
+
+- *Parameters*:
+  - =option-name=: "3 months" and "6 months"
+  - =option-length=: 90 days and 180 days
+  - =time-multiplier=: 1.25 and 1.5
+  - =poller-max-boost=: 1.1 and 1.15
+  - =polling-power-multiplier=: 5.0 and 8.0
+  - =min-amount=: 100.0
+  - =max-amount=: 10000.0
+  - =base-apr=: 1.1
+  - =total-rewards=: 15000.0
+  - =start-time=: January 11, 2024
+  - =creator=: "k:bob"
+  - =polls-at-lock=: 0
+
+- *Influence on Rewards*:
+
+  Assume that Alice locks 1000 KDA on the 6-month option of this bond and participates in  8 of 10 polls. In this case her returns will be given by
+
+  =1000 * 1.1 * 1.5 * (0.8*1.15 + 0.2) = 1.848=. This means that Alice had an 84.4% ROI during her lockup
+
+This setup encourages participants to engage more frequently in polling activities and also commit their assets for longer periods to maximize their returns.
+
+**** Example 2: Valid Bond Creation - No Participation Rewards
+
+In this example, the bond's reward structure is influenced solely by the time duration, without additional rewards for participation.
+
+- *Parameters*:
+  - =option-name=: "12 months" and "24 months"
+  - =option-length=: 365 days and 730 days
+  - =time-multiplier=: 1.5 and 2.0
+  - =poller-max-boost=: 1.0
+  - =polling-power-multiplier=: 1.0 and 2.0
+  - =min-amount=: 100.0
+  - =max-amount=: 1000.0
+  - =base-apr=: 1.0
+  - =total-rewards=: 10000.0
+  - =start-time=: January 13, 2024
+  - =creator=: "k:alice"
+  - =polls-at-lock=: 0
+
+- *Influence on Rewards*:
+ If Bob locks 500 KDA on the 24-month option of this bond, he will receive rewards based solely on the duration of his lockup, only needing to participate one single time to claim full rewards. In this case, Bob's returns are computed as
+
+ =500*2.0=1000=. That results in a 100% ROI for Bob.
+
+This example illustrates a straightforward reward system where the focus is on the commitment duration rather than active engagement.
+
+**** Example 3: Valid Bond Creation - Only Participation Rewards
+
+This example highlights a bond where rewards are more heavily influenced by participation, rather than just the time duration.
+
+- *Parameters*:
+  - =option-name=: "12 months" and "24 months"
+  - =option-length=: 365 days and 730 days
+  - =time-multiplier=: 1.0
+  - =poller-max-boost=: 1.5 and 2.0
+  - =polling-power-multiplier=: 1.0 and 2.0
+  - =min-amount=: 100.0
+  - =max-amount=: 1000000.0
+  - =base-apr=: 1.0
+  - =total-rewards=: 1000.0
+  - =start-time=: January 12, 2024
+  - =creator=: "k:tom"
+  - =polls-at-lock=: 0
+
+- *Influence on Rewards*:
+ Assume Tom locks 10000 KDA on the 12-month option of this bond and participates in 80% of the polls. In this case we can obtain Tom's returns by computing
+
+ =10000*(0.8*2 + 0.2)=18000=. Clearly, Tom had an 80% gain.
+
+This structure encourages participants to be highly active in polling to maximize their returns, making participation the key factor in the reward calculation.
+
+
+This example highlights a bond where rewards are more heavily influenced by participation, rather than just the time duration.
+** Contract Capabilities
+
+   - GOVERNANCE: Ensures only authorized administrators can perform certain operations.
+   - OPS: Allows contract operators to execute operational functions.
+   - ACCOUNT_GUARD: Manages the account-specific interactions.
+   - LOCK: Governs the token locking mechanism.
+   - CLAIM: Manages the claiming process for locked tokens.
+   - BANK_DEBIT: Manages transfers from the contract account.
+   - CREATE_BOND: Ability to create bonds.
+   - MANAGE_BOND_REWARDS: Manage rewards for bonds.
+   - PRIVILEGE_GUARD: Guard user by the poller contract user for poll and interaction counting.
+
+** Key Functions Detailed Overview
+
+*** init
+Initializes the contract by creating the bonder bank account with the appropriate guard and setting the initial lock status.
+   - Parameters:
+     - =initial-lock=: Boolean value indicating whether the contract should start in a locked state.
+
+*** create-bond
+Creates a bond sale, specifying the terms and rewards. The function transfers the total rewards amount from the creator's account to the Bonder contract account upon bond creation.
+   - Parameters:
+     - =start-time=: The start time of the bond sale.
+     - =lockup-options=: An array of lockup options, each defining the lockup period and associated rewards.
+     - =whitelisted-accounts=: An array of accounts allowed to participate before the official start time.
+     - =min-amount=: The minimum amount of KDA that can be locked.
+     - =max-amount=: The maximum amount of KDA that can be locked.
+     - =base-apr=: The base Annual Percentage Rate for the bond.
+     - =account=: The account creating the bond.
+     - =total-rewards=: The total rewards allocated for the bond.
+
+*** lock
+Allows users to lock KDA tokens in a bond, specifying the amount and duration. The locked tokens are transferred from the user's account to the Bonder contract account.
+   - Parameters:
+     - =bond-id=: The ID of the bond in which to lock tokens.
+     - =amount-time=: The duration for which the tokens are locked.
+     - =amount-kda=: The amount of KDA tokens to lock.
+     - =account=: The account locking the tokens.
+
+*** claim
+Enables users to claim their locked tokens and accrued rewards after the lockup period has ended. The total amount (original locked amount plus rewards) is transferred from the Bonder contract account to the user's account.
+   - Parameters:
+     - =bond-id=: The ID of the bond from which to claim tokens.
+     - =account=: The account claiming the tokens.
+
+*** claim-back-rewards
+Claims back available rewards for a specified bond, transferring earned KDA to the account. Only the bond creator can perform this action.
+   - Parameters:
+     - =bond-id=: The ID of the bond.
+     - =account=: The account to which the rewards are to be transferred.
+     - =amount=: The amount of rewards to be claimed back.
+
+*** add-bond-rewards
+Adds extra rewards to an existing bond, opening more spots for new lockups. Only the bond creator can perform this action.
+   - Parameters:
+     - =bond-id=: The ID of the bond.
+     - =account=: The account adding the rewards.
+     - =amount=: The amount of extra rewards to be added.
+
+*** read-bond
+Fetches bond details for a given bond ID.
+   - Parameters:
+     - =bond-id=: The ID of the bond.
+
+*** read-lockup
+Retrieves lockup details for a given lockup ID.
+   - Parameters:
+     - =lockup-id=: The ID of the lockup.
+
+*** get-active-bonds
+Retrieves all active bond details.
+   - Parameters: None.
+
+*** get-account-active-lockups
+Retrieves all active lockups associated with a specified account.
+   - Parameters:
+     - =account=: The account whose active lockups are being fetched.
+
+*** get-bond-available-rewards
+Returns the available rewards from a specified bond.
+   - Parameters:
+     - =bond-id=: The ID of the bond.
+
+*** increment-bonder-interactions
+Increases the interaction count for a user's lockup, potentially affecting the rewards calculation.
+   - Parameters:
+     - =bond-id=: The ID of the bond.
+     - =account=: The account whose interaction count is to be increased.
+
+*** increment-bond-polls
+Increases the total poll count for a bond, which can influence the rewards for all participants.
+   - Parameters:
+     - =bond-id=: The ID of the bond.
+
+*** grant-privilege
+Grants a specified guard privilege to perform a specific action.
+   - Parameters:
+     - =g=: The guard to be granted the privilege.
+     - =action=: The action for which the privilege is granted.
+
+** Security and Validation
+
+The Bonder contract incorporates plenty security measures and validation checks to ensure the integrity and proper functioning of its features. These mechanisms are crucial for preventing unauthorized actions, ensuring data consistency, and maintaining the contract's overall security posture.
+
+*** Capabilities, Guards, and Privileges
+
+- *Guarded Capabilities*: The contract defines specific capabilities (GOVERNANCE, OPS, INTERNAL, LOCK, CLAIM) that restrict access to critical functions. For example, the GOVERNANCE capability ensures that only designated administrators can perform certain administrative tasks such as contract updates, while the OPS capability is reserved for operational actions by authorized operators.
+
+- *Dynamic Capability Acquisition*: Functions like lock and claim require the dynamic acquisition of capabilities (LOCK, CLAIM) to execute, ensuring that actions are only performed by users who meet the necessary criteria at the time of execution.
+
+- *Privileges*: There are some functions from the Poller contract that write values to tables that 'belong' to the bonder contract. To ensure that such functions can only be called by the poller contract, we have a special table that associates guards to actions on the contract. Such guard is created and stored on the table when the poller contract is deployed.
+
+*** Validation Checks
+
+- *Bond and Lockup Validations*: The =validate-bond= and =validate-lockup-option= functions ensure that bonds and lockup options adhere to predefined rules, such as positive reward amounts, valid time frames, and minimum APR requirements.
+
+- *Time Constraints*: There are functions and capabilities that enforce time-related constraints. For example, we use =(enforce-guard (after-date start-time))=, to ensure actions occur within the designated time windows, preventing premature or belated operations that could disrupt bond sales or reward distributions.
+
+- *Reward Availability*: The LOCK capability includes checks to confirm sufficient rewards are available for new lockups, as seen in the enforcement line: =enforce (>= (- total-rewards (+ locked-rewards given-rewards)) rewards)=.
+
+- *Whitelist and Participation Checks*: Certain operations are restricted to whitelisted accounts or those that have participated within specific periods, enhancing the contract's governance and incentive structures.
+
+*** Security Events and Guard Checks
+
+- *Security Events (@event)*: Key actions within the contract are marked with the @event keyword, facilitating the tracking and auditing of significant operations, such as lockups and claims, enhancing transparency and traceability.
+- *Enforce Guards*: The contract employs =enforce-guard= statements to validate the identity and permissions of users attempting to execute sensitive functions, ensuring that only authorized individuals can perform those actions.
+
+*** Account and Principal Validations
+- *Account Type Checks*: The contract includes checks to ensure that only valid Kadena account types (e.g., k: prefixed accounts) can participate in certain actions, as seen in =validate-principal-account=.
+- *Unique Lockup Identifiers*: The construction of lockup keys using the =get-lockup-key= function ensures that each lockup is uniquely identifiable, preventing conflicts and ensuring the integrity of user positions.
+
+These security and validation mechanisms work together to safeguard the contract against unauthorized access, ensure the consistency and accuracy of contract data, and maintain a secure and reliable environment for managing Kadena token transactions and governance activities.
+
+
+* Poller Contract Documentation
+
+** Overview
+
+The Poller contract is designed to manage governance through polls. It allows core agents to create polls, bonders to vote on these polls, and tracks interactions to influence rewards.
+
+** Key Functionalities
+
+- *Poll Creation*: Authorized core agents can create polls using the `create-poll` function, allowing governance proposals to be voted on by bonders.
+- *Governance*: Bonders can vote on polls with options to approve, reject, or abstain. The votes are tallied, and the consensus is recorded.
+- *Interactions*: Bonder interactions, such as voting in polls, affect their earnings from locking activities.
+
+** Operational Mechanics
+
+- *Contract Communications*: The contract interacts with the Bonder contract to manage polling power based on bonders' locked positions and their interactions. It is also responsible for
+  recording user interactions in the bonder contract, which are later user in reward computation.
+- *Main Entrypoints*: Core functionalities include =create-poll= for creating polls and =vote-approved=, =vote-refused=, and =vote-abstain= for voting on polls.lockups. The bonder-utils contract contains functions that don't work well with formal verification. We intend to use such functions only for read-type local calls and as of now the bonder-utils contract will only work
+when interacting with nodes having the `AllowReadsOnLocal` option activated.
+
+** Schemas and Tables
+
+- *poll*: Tracks proposals created by core members.
+- *poll-vote*: Records votes in polls from bonder accounts.
+- *polling-parameters*: Tracks the duration of each election phase.
+- *contract-lock-status*: Tracks the lock status of the contract.
+
+** Key Functions Detailed Overview
+
+- **GOVERNANCE**: Ensures only authorized administrators can perform certain operations.
+- **OPS**: Allows contract operators to execute operational functions.
+- **INTERNAL**: Reserved for internal contract mechanisms.
+- **ACCOUNT_GUARD**: Manages the account-specific interactions.
+- **BONDER**: Manages privileges for bonder accounts.
+- **CORE_MEMBER**: Manages privileges for core accounts.
+- **PERIOD**: Ensures operations occur within specified time periods.
+- **CREATE_POLL**: Allows creating new polls.
+- **VOTE**: Grants permission to vote in polls.
+- **BONDER_NOTIFY**: Manages interaction with the Bonder contract.
+
+*** Schemas and Tables
+
+- *poll*: Tracks proposals created by core members.
+- *poll-vote*: Records votes in polls from bonder accounts.
+- *polling-parameters*: Tracks the duration of each election phase and also quorum percentage.
+- *contract-lock-status*: Tracks the lock status of the contract.
+
+** Key Functions Detailed Overview
+
+*** create-poll
+Creates a new poll, specifying the terms and details. Only core members can perform this action.
+   - Parameters:
+     - =account=: The account creating the poll.
+     - =title=: The title of the poll.
+     - =description=: A detailed description of the poll.
+
+*** vote-approved
+Allows bonders to vote to approve a poll.
+   - Parameters:
+     - =account=: The account voting.
+     - =poll-id=: The ID of the poll being voted on.
+
+*** vote-refused
+Allows bonders to vote to refuse a poll.
+   - Parameters:
+     - =account=: The account voting.
+     - =poll-id=: The ID of the poll being voted on.
+
+*** vote-abstain
+Allows bonders to abstain from voting on a poll.
+   - Parameters:
+     - =account=: The account abstaining.
+     - =poll-id=: The ID of the poll being voted on.
+
+*** is-poll-approved
+Checks if a poll has been approved.
+   - Parameters:
+     - =poll-id=: The ID of the poll.
+
+*** read-account-created-polls
+Fetches all polls created by a specified account.
+   - Parameters:
+     - =account=: The account whose polls are being fetched.
+
+*** read-active-polls
+Retrieves all active polls.
+   - Parameters: None.
+
+*** read-all-polls
+Retrieves details of all polls created in the contract.
+   - Parameters: None.
+
+*** read-poll-votes
+Retrieves all votes in a specified poll.
+   - Parameters:
+     - =poll-id=: The ID of the poll.
+
+*** read-all-account-votes
+Fetches all votes from a specified account.
+   - Parameters:
+     - =account=: The account whose votes are being fetched.
+
+*** read-poll-vote
+Fetches a specific vote in a poll.
+   - Parameters:
+     - =account=: The account that voted.
+     - =poll-id=: The ID of the poll.
+
+*** read-poll
+Fetches details of a specified poll.
+   - Parameters:
+     - =poll-id=: The ID of the poll.
+
+*** edit-polling-parameters
+Allows operators to edit the durations of voting periods.
+   - Parameters:
+     - =params=: The new voting periods.
+
+*** get-polling-power
+Retrieves the polling power of a bonder.
+   - Parameters:
+     - =account=: The account whose polling power is being fetched.
+     - =poll-id=: The ID of the poll.
+*** compute-poll-quorum
+Computes the quorum for a poll based on active bonds.
+   - Parameters:
+     - =active-bonds=: List of active bond IDs.
+
+*** compute-poll-votes-quorum
+Computes the votes quorum for a poll based on active bonds.
+   - Parameters:
+     - =active-bonds=: List of active bond IDs.
+
+** Security and Validation
+
+
+The Poller contract incorporates several security measures and validation checks to ensure the integrity and proper functioning of its features. These mechanisms are crucial for preventing unauthorized actions, ensuring data consistency, and maintaining the contract's overall security posture.
+
+** Capabilities, Guards, and Privileges
+
+- **Guarded Capabilities**: The contract defines specific capabilities (GOVERNANCE, OPS, INTERNAL, ACCOUNT_GUARD, BONDER, CORE_MEMBER, PERIOD, CREATE_POLL, VOTE, BONDER_NOTIFY) that restrict access to critical functions.
+- **Dynamic Capability Acquisition**: Functions like `create-poll` and `vote` require dynamic acquisition of capabilities to execute, ensuring that actions are only performed by users who meet the necessary criteria.
+
+** Validation Checks
+
+- *Poll Validations*: Functions like `create-poll` and `vote` ensure that poll parameters adhere to predefined rules, such as valid time frames and character limits.
+- *Time Constraints*: Functions enforce time-related constraints to ensure actions occur within designated windows.
+- *Account and Bonding Checks*: Operations validate accounts and their associated bonds to enhance governance and incentive structures.
+
+** Security Events and Guard Checks
+
+- *Security Events (@event)*: Key actions within the contract are marked with the @event keyword, facilitating tracking and auditing.
+- *Enforce Guards*: The contract employs different enforcements to validate the identity and permissions of users attempting to execute sensitive functions.
+
+These security and validation mechanisms work together to safeguard the contract against unauthorized access, ensure data consistency and accuracy, and maintain a secure environment for managing Kadena token transactions and governance activities.

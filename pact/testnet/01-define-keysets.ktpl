@@ -1,0 +1,30 @@
+networkId: {{{network}}}
+signers:
+  - public: {{{ns-admin-pk}}}
+    caps:
+      - name: coin.GAS
+        args: []
+  - public: {{{ns-admin-pk}}}
+  - public: {{{gov-pk}}}
+  - public: {{{ops-pk}}}
+data:
+  ns: "{{{ns}}}"
+  upgrade: false
+  gov-keyset:
+    keys:
+    - {{{gov-pk}}}
+    pred: keys-all
+  ops-keyset:
+    keys:
+    - {{{ops-pk}}}
+    pred: keys-all
+publicMeta:
+  chainId: "{{chain}}"
+  gasLimit: 100000
+  ttl: 7200
+  sender: {{{ns-admin-acc}}}
+  gasPrice: 0.000001
+code: |+
+  (namespace (read-msg 'ns))
+  (define-keyset "{{{ns}}}.bonder-admin" (read-keyset 'gov-keyset))
+  (define-keyset "{{{ns}}}.bonder-ops" (read-keyset 'ops-keyset))

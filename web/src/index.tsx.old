@@ -1,0 +1,22 @@
+// pages/index.tsx
+import React from 'react';
+
+const Home = ({ toggleModal, isModalOpen }) => {
+  // Example use of toggleModal passed down from _app.tsx
+  const handleToggleModal = () => {
+    toggleModal();
+  };
+
+  return (
+    <div>
+      <h1>Welcome to the Home Page</h1>
+      <p>This is the main content of your home page.</p>
+      <button onClick={handleToggleModal}>
+        {isModalOpen ? 'Close Modal' : 'Open Modal'}
+      </button>
+      {/* More content specific to the home page */}
+    </div>
+  );
+};
+
+export default Home;

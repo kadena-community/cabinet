@@ -1,0 +1,22 @@
+codeFile: ./bonder-utils.pact
+networkId: {{{network}}}
+signers:
+  - public: {{{ns-admin-pk}}}
+    caps:
+      - name: coin.GAS
+        args: []
+  - public: {{{gov-pk}}}
+  - public: {{{ns-admin-pk}}}
+data:
+  ns: "{{{ns}}}"
+  upgrade: {{{upgrade}}}
+  ns-admin-keyset:
+    keys:
+    - {{{ns-admin-pk}}}
+    pred: keys-all
+publicMeta:
+  chainId: "{{chain}}"
+  gasLimit: 100000
+  ttl: 7200
+  sender: {{{ns-admin-acc}}}
+  gasPrice: 0.000001

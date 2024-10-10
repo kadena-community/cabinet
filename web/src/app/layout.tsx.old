@@ -1,0 +1,22 @@
+import React from 'react';
+// No need to import createRoot or react-dom/client
+
+export default function Layout({ children }) {
+  // Wrap children with layout-specific components, such as headers, footers, etc.
+  return (
+    <div>
+      {/* For example, a header component */}
+      <header>
+        {/* Navigation, logo, etc. */}
+      </header>
+
+      {/* Main content area where children components are rendered */}
+      <main>{children}</main>
+
+      {/* Footer */}
+      <footer>
+        {/* Footer content */}
+      </footer>
+    </div>
+  );
+}

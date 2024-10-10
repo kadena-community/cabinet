@@ -1,0 +1,18 @@
+(begin-tx "Setup")
+
+;;Load bonder Contract
+(load "bonder.repl")
+
+(env-data
+ { 'bonder-admin: ["admin"]
+                  , 'bonder-ops: ["operate"]
+                  , 'ns: "dab"
+                  , 'upgrade: false})
+(env-keys ["admin", "operate"])
+
+(env-gasmodel "table")
+(env-gaslimit 100000)
+
+
+(load "bonder-utils.pact")
+(typecheck "dab.bonder-utils")

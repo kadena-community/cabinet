@@ -1,0 +1,48 @@
+(begin-tx "Setup")
+
+(env-enable-repl-natives true) ;; enables usage of (print)
+(env-exec-config ["DisablePact44"])
+
+;;Load Coin Contract and fungible-v2 interface
+(load "./root/fungible-v2.pact")
+(load "./root/coin.pact")
+
+;;Load utils Contract
+(env-data
+ { 'util-ns-users: ["util-ns-user"]
+                   , 'util-ns-admin: ["util-ns-admin"]
+                   })
+(env-keys ["util-ns-user", "util-ns-admin"])
+(load "./root/ns.pact")
+(load "./root/guards.pact")
+
+(env-data { 'alice: ["584deb6f81d8efe67767309d1732019cf6ad14f9f0007cff50c730ef62521c68"]})
+(define-keyset 'alice-keyset (read-keyset 'alice))
+
+;; Define Namespaces
+(env-exec-config [])
+(env-data
+ { 'ns-admin-keyset: ["admin"]
+                     , 'ns-operate-keyset: ["operate"]
+                     , 'ns-genesis-keyset: { "keys": [], "pred": "="}
+                     , 'ns: "dab"
+                     , 'upgrade:false})
+
+(env-keys ["admin", "operate"])
+
+(define-namespace 'dab (read-keyset 'ns-admin-keyset) (read-keyset 'ns-genesis-keyset))
+(commit-tx)
+
+(begin-tx "Create admin and ops keysets")
+
+
+(env-data
+ { 'bonder-admin: ["admin"]
+                  , 'bonder-ops: ["operate"]
+                  , 'ns: "dab"
+                  , 'upgrade: false})
+(env-keys ["admin", "operate"])
+(namespace 'dab)
+(define-keyset "dab.bonder-admin" (read-keyset "bonder-admin"))
+(define-keyset "dab.bonder-ops" (read-keyset "bonder-ops"))
+(commit-tx)

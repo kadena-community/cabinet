@@ -1,0 +1,25 @@
+version: "3"
+services:
+  cache:
+    image: redis
+  backend:
+    build: ./backend
+    environment:
+      - ASPNETCORE_URLS=http://*:5000
+      - ASPNETCORE_ENVIRONMENT=Staging
+    depends_on:
+      - cache
+    links:
+      - cache
+    ports:
+      - 5000:5000
+  # frontend:
+  #   build: ./web
+  #   ports:
+  #     - 80:8000
+  #   depends_on:
+  #     - backend
+  #   links:
+  #     - backend
+  #   # environment:
+  #   #   - NODE_ENV=test

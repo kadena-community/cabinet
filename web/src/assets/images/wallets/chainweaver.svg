@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="90" height="90" viewBox="10 7 50 50">
+  <defs>
+    <filter id="Ellipse_65" x="0" y="0" width="72" height="72" filterUnits="userSpaceOnUse">
+      <feOffset dy="4" input="SourceAlpha"/>
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feFlood flood-opacity="0.251"/>
+      <feComposite operator="in" in2="blur"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="linear-gradient-chainweaver" x1="0.516" y1="1" x2="0.516" gradientUnits="objectBoundingBox">
+      <stop offset="0" stop-color="#0455cf"/>
+      <stop offset="1" stop-color="#141888"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient-chainweaver-2" x1="0.433" y1="0.234" x2="0.117" y2="0.031" gradientUnits="objectBoundingBox">
+      <stop offset="0" stop-color="#5abee7"/>
+      <stop offset="1" stop-color="#6b0097"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient-chainweaver-3" x1="0.292" y1="0.164" x2="0" y2="0.97" xlink:href="#linear-gradient-chainweaver-2"/>
+  </defs>
+  <g id="Group_76919" data-name="Group 76919" transform="translate(-566 -644)">
+    <g id="Frame" transform="translate(578 652)">
+      <path id="Ellipse_64" data-name="Ellipse 64" d="M48,24A24,24,0,1,1,24,0,24,24,0,0,1,48,24Z" fill="#2b61d1"/>
+      <g id="Group_179" data-name="Group 179">
+        <path id="Path_73" data-name="Path 73" d="M8.594,3.409,5.864,5,0,1.588,2.663.039,2.73,0l.1.059Z" transform="translate(18.282 34.548)" fill="#fff"/>
+        <path id="Path_74" data-name="Path 74" d="M26.415,7.679v3.2L20.643,7.519l-1.565-.91-1.565.91-7.337,4.267-1.565.91v1.882L5.786,12.937l-1.565-.91-1.565.91L0,14.48v-6.8L13.207,0Z" transform="translate(10.939 8.828)" fill="#fff"/>
+        <path id="Path_75" data-name="Path 75" d="M14.675,4.268V12.8L7.338,17.068l-.01-.006L0,12.8V4.268L7.338,0Z" transform="translate(22.679 19.077)" fill="#fff"/>
+        <path id="Path_76" data-name="Path 76" d="M8.441,2.453V7.36L4.221,9.816,0,7.36V2.453L4.221,0Z" transform="translate(10.939 24.497)" fill="#fff"/>
+      </g>
+      <g id="Group_69398" data-name="Group 69398">
+        <g transform="matrix(1, 0, 0, 1, -12, -8)" filter="url(#Ellipse_65)">
+          <path id="Ellipse_65-2" data-name="Ellipse 65" d="M48,24A24,24,0,1,1,24,0,24,24,0,0,1,48,24Z" transform="translate(12 8)" fill="#fff"/>
+        </g>
+        <path id="Ellipse_64-2" data-name="Ellipse 64" d="M42.182,21.091A21.091,21.091,0,1,1,21.091,0,21.091,21.091,0,0,1,42.182,21.091Z" transform="translate(2.909 2.909)" fill="#2b61d1"/>
+        <g id="Group_179-2" data-name="Group 179">
+          <path id="Path_73-2" data-name="Path 73" d="M7.552,3l-2.4,1.4L0,1.4,2.34.035,2.4,0l.089.052Z" transform="translate(18.975 33.27)" fill="#fff"/>
+          <path id="Path_74-2" data-name="Path 74" d="M23.213,6.748V9.557L18.141,6.608l-1.376-.8-1.376.8L8.941,10.357l-1.376.8v1.654L5.085,11.369l-1.376-.8-1.376.8L0,12.725V6.748L11.607,0Z" transform="translate(12.522 10.667)" fill="#fff"/>
+          <path id="Path_75-2" data-name="Path 75" d="M12.9,3.751v7.5L6.448,15l-.009-.005L0,11.25v-7.5L6.448,0Z" transform="translate(22.839 19.673)" fill="#fff"/>
+          <path id="Path_76-2" data-name="Path 76" d="M7.418,2.156V6.468L3.709,8.626,0,6.468V2.156L3.709,0Z" transform="translate(12.522 24.436)" fill="#fff"/>
+        </g>
+        <g id="Group_69395" data-name="Group 69395">
+          <g id="Group_69392" data-name="Group 69392">
+            <g id="Group_69394" data-name="Group 69394">
+              <circle id="Ellipse_3149" data-name="Ellipse 3149" cx="22.545" cy="22.545" r="22.545" transform="translate(1.455 1.455)" fill="url(#linear-gradient-chainweaver)"/>
+              <g id="Group_428" data-name="Group 428">
+                <path id="Vector_12" data-name="Vector 12" d="M17.075,18.213H8.822L0,4.838,4.838,0Z" transform="translate(20.743 21.027)" fill="url(#linear-gradient-chainweaver-2)"/>
+                <path id="Vector_11" data-name="Vector 11" d="M9.96,0H18.5L0,19.067V10.53Z" transform="translate(18.751 10.213)" fill="url(#linear-gradient-chainweaver-3)"/>
+                <path id="Vector_10" data-name="Vector 10" d="M0,0H7.115V29.028H0Z" transform="translate(11.636 10.213)" fill="#5abee7"/>
+              </g>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

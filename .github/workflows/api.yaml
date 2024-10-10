@@ -1,0 +1,26 @@
+name: Cabinet API Continuous Integration
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+
+jobs:
+  backend-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - uses: actions/setup-dotnet@v2
+      - name: Restore dependencies
+        run: |
+          cd backend/API
+          dotnet restore
+      - name: Build API
+        run: |
+          ls
+          cd backend/API
+          dotnet build

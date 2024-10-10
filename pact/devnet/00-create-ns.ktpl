@@ -1,0 +1,26 @@
+networkId: {{{network}}}
+signers:
+  - public: {{{admin-pk}}}
+    caps:
+      - name: coin.GAS
+        args: []
+  - public: {{{ns-admin-pk}}}
+  - public: {{{admin-pk}}}
+data:
+  ns: "{{{ns}}}"
+  upgrade: false
+  ns-admin-keyset:
+    keys:
+    - {{{admin-pk}}}
+    pred: keys-all
+publicMeta:
+  chainId: "{{chain}}"
+  gasLimit: 100000
+  ttl: 7200
+  sender: {{{admin-account}}}
+  gasPrice: 0.000001
+code: |+
+  (ns.write-registry (read-msg 'ns) (read-keyset 'ns-admin-keyset) true)
+  (define-namespace (read-msg 'ns) (read-keyset 'ns-admin-keyset) (read-keyset 'ns-admin-keyset))
+  (ns.write-registry "util" (read-keyset 'ns-admin-keyset) true)
+  (define-namespace "util" (read-keyset 'ns-admin-keyset) (read-keyset 'ns-admin-keyset))

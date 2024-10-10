@@ -1,0 +1,28 @@
+networkId: {{{network}}}
+signers:
+  - public: {{{admin-pk}}}
+    caps:
+      - name: coin.GAS
+        args: []
+  - public: {{{ns-admin-pk}}}
+    caps:
+        - name: coin.TRANSFER
+          args: ["sender00", "{{{admin-account}}}", 1000000.0 ]
+        - name: coin.TRANSFER
+          args: ["sender00", "{{{user-account}}}", 100000.0 ]
+  - public: {{{admin-pk}}}
+data:
+  ns: "{{{ns}}}"
+  user-ks:
+    keys:
+    - {{{user-pk}}}
+    pred: keys-all
+publicMeta:
+  chainId: "{{chain}}"
+  gasLimit: 100000
+  ttl: 7200
+  sender: {{{admin-account}}}
+  gasPrice: 0.000001
+code: |+
+       (coin.transfer "sender00" "{{{admin-account}}}" 1000000.0)
+       (coin.transfer-create "sender00" "{{{user-account}}}" (read-keyset 'user-ks) 100000.0)

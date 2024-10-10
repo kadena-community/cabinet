@@ -1,0 +1,479 @@
+/* Main styles */
+
+.grid {
+  @apply flex flex-col items-center justify-center text-lg;
+}
+
+.analyticsTooltip {
+  @apply bg-k-Blue-700 text-k-Cream-default p-2 rounded;
+}
+
+.sidebarOpen {
+  @apply translate-x-0;
+}
+
+.sidebarClosed {
+  @apply translate-x-full;
+}
+
+
+.activitySidebarContent {
+  @apply overflow-y-auto flex-1 p-4;
+}
+
+.activityOverlay {
+  @apply fixed inset-0 bg-black bg-opacity-20 z-40;
+}
+
+.successBackground {
+  @apply bg-k-Green-default;
+}
+
+.limitedWidth {
+  max-width: 24rem; /* Apply a max width of 24rem (384px) */
+  word-break: break-all; /* Ensure long texts break into new lines */
+}
+
+.limitedWidthPoll {
+  max-width: 200rem; /* Apply a max width of 24rem (384px) */
+  word-break: break-all; /* Ensure long texts break into new lines */
+}
+
+/* Link and buttons */
+.link {
+  @apply text-white py-3 px-5 hover:bg-k-Green-default block rounded m-2;
+  transition: background-color 0.3s ease;
+}
+
+.buttonApprove {
+  @apply text-white bg-k-Green-default hover:bg-k-Green-700 font-bold rounded px-4 py-2;
+}
+
+
+
+.buttonAll {
+  @apply border text-white font-bold rounded border-white text-k-Cream-default bg-k-Blue-default hover:bg-k-Blue-400 px-4 py-2;
+}
+
+.buttonReject {
+  @apply text-white font-bold rounded bg-k-Pink-700 hover:bg-red-700 font-bold px-4 py-2;
+}
+
+.buttonAbstain {
+  @apply text-white font-bold rounded bg-k-Orange-default font-bold px-4 py-2;
+}
+
+/* Text styles */
+
+.title {
+  @apply text-3xl justify-center font-kadena text-white leading-tight tracking-wide max-w-sm m-auto;
+}
+
+.note {
+  @apply text-center text-xl text-k-Green-default font-kadena leading-relaxed;
+}
+
+/* Blockchain related styles */
+.blockChain {
+  @apply flex justify-center items-start gap-6 w-full;
+}
+
+.cardTitle {
+  @apply font-kadena leading-10;
+}
+
+.cardItem {
+  @apply text-base font-kadena leading-10;
+}
+
+.cardComment {
+  @apply text-sm font-kadena leading-10;
+}
+
+/* Fieldset */
+.fieldset {
+  @apply border-none p-1 flex flex-col items-start gap-2 w-full h-full;
+}
+
+/* Field label */
+.fieldLabel {
+  @apply  font-semibold;
+}
+
+/* Input styles */
+.input {
+  @apply flex h-10 p-2 items-center gap-4 flex-grow rounded bg-white w-full text-base font-normal text-black placeholder-gray-500;
+}
+
+.button:hover {
+  @apply bg-k-Orange-200 text-k-Blue-default;
+}
+
+.button:disabled {
+  @apply bg-gray-500 cursor-not-allowed;
+}
+
+/* List styles */
+.list {
+  @apply pl-5 flex flex-col gap-1 pb-2;
+}
+
+/* Link styles */
+.link {
+  @apply text-white mr-5 font-semibold;
+}
+
+.link:hover {
+  @apply no-underline;
+}
+
+/* Disabled button styles */
+.buttonDisabled {
+  @apply bg-gray-600 cursor-not-allowed;
+}
+
+.optionContainer {
+  @apply absolute bg-white border border-gray-300 rounded w-full z-10;
+}
+
+.option {
+  @apply p-4 cursor-pointer;
+}
+
+.option:hover,
+.selectedOption {
+  @apply bg-purple-200;
+}
+
+.dropdownIcon {
+  @apply float-right;
+}
+
+.label {
+  @apply flex text-white font-normal items-center tabular-nums;
+}
+
+.end {
+  @apply justify-end;
+}
+
+.tagLabel {
+  @apply flex text-center justify-center items-center rounded-full tabular-nums;
+}
+
+.optionCardClickable {
+  @apply flex flex-row items-center gap-4 p-4 bg-transparent border-none w-full;
+}
+
+.clickable {
+  @apply mt-0 cursor-pointer;
+}
+
+.greenCircle {
+  @apply flex justify-center items-center h-2 w-2 mr-2 bg-k-Green-default rounded-full;
+}
+
+.circleWrapper {
+  @apply flex justify-center items-center;
+}
+
+.headerText {
+  @apply flex text-base font-medium;
+}
+
+.iconWrapper {
+  @apply flex items-center justify-center;
+}
+
+.iconWrapper img,
+.iconWrapper span {
+  @apply h-6 w-6;
+}
+
+.externalLink {
+  @apply no-underline;
+}
+
+.web3Status {
+  @apply flex items-center justify-center p-4 rounded text-sm uppercase cursor-pointer border-transparent;
+}
+
+.web3StatusConnected {
+  @apply bg-transparent;
+}
+
+.web3StatusConnect {
+  @apply bg-transparent text-gray-600;
+}
+
+.iconWrapper {
+  @apply mr-2 h-6 w-6;
+}
+
+/* Popup Styles*/
+
+.fixedPopupColumn {
+  @apply fixed right-4 z-[900] bottom-12 max-w-sm w-full;
+}
+
+@media (max-width: 600px) {
+  .fixedPopupColumn {
+    @apply hidden;
+  }
+}
+
+.popup {
+  @apply inline-flex w-full max-w-sm justify-between overflow-hidden rounded-2xl relative;
+}
+
+.messagePopup {
+  @apply flex-grow p-4;
+}
+
+.popupClose {
+  @apply absolute right-2 top-2 z-10;
+}
+
+/* Hover state for close button */
+.popupClose:hover {
+  @apply cursor-pointer;
+}
+
+/* Fader bar at the bottom of the popup */
+.popupFader {
+  @apply absolute bottom-0 left-0 w-full h-1;
+  /* Extend fader bar to full width */
+}
+
+.successPopup {
+  @apply bg-k-Green-default text-white;
+}
+
+.errorPopup {
+  @apply bg-red-500 text-white;
+}
+
+.warningPopup {
+  @apply bg-yellow-500 text-white;
+}
+
+.infoPopup {
+  @apply bg-blue-500 text-white;
+}
+
+.pendingPopup {
+  @apply bg-gray-500 text-white;
+}
+
+/* Apply the color of the fader bar to match the popup */
+.successPopup .popupFader,
+.errorPopup .popupFader,
+.warningPopup .popupFader,
+.infoPopup .popupFader,
+.pendingPopup .popupFader {
+  @apply bg-opacity-20;
+  /* Slightly transparent fader bar */
+}
+
+.dialogOverlay {
+  @apply z-10 bg-transparent overflow-hidden flex items-center justify-center;
+}
+
+.dialogContent {
+  @apply m-0 border border-black shadow-md p-0 flex rounded-lg;
+}
+
+.dialogContentMobile {
+  @apply self-end w-full rounded-t-lg rounded-b-none;
+}
+
+/* Modal Styles */
+.modalOverlay {
+  @apply fixed inset-0 bg-black bg-opacity-50 z-[996];
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.modalContainer {
+  @apply fixed inset-0 z-[997] flex items-center justify-center p-4;
+}
+
+.modalContent {
+  position: relative;
+}
+.sidebarModal {
+  transition: transform 0.3s ease-in-out;
+  transform: translateX(-100%);
+}
+
+.sidebarModalOpen {
+  transform: translateX(0);
+}
+
+
+.votingModal {
+  @apply bg-k-Cream-default rounded-lg shadow-lg max-w-lg mx-auto my-auto p-6 overflow-hidden transform transition-all sm:max-w-2xl;
+  width: 90%; /* Adjust this value as needed */
+  max-width: 90%; /* Adjust this value as needed */
+  height: 94%; /* Adjust this value as needed */
+  max-height: 94%; /* Adjust this value as needed */
+  overflow-y: auto; /* Ensure the modal content can scroll */
+}
+
+/* Wallet Modal Header */
+.modalHeader {
+  @apply  font-semibold flex justify-between items-center pb-3;
+}
+
+.listItem {
+  margin-bottom: 16px; /* Adjust the value to suit your spacing needs */
+  border: 1px solid #ccc; /* Optional: adds a subtle separator */
+}
+
+/* Wallet Modal Title */
+.modalTitle {
+  @apply text-lg font-medium;
+}
+
+/* Wallet Modal Body */
+.modalBody {
+  @apply py-4;
+}
+
+/* Wallet Modal Actions */
+.modalActions {
+  @apply flex justify-end gap-4 pt-4 border-t border-gray-200;
+}
+
+/* Modal Button */
+.modalButton {
+  @apply bg-k-Orange-default hover:bg-k-Orange-200  font-bold py-2 px-4 rounded;
+}
+
+/* Specific styles for different views in the modal */
+.accountDetails,
+.pendingView,
+.selectAccount,
+.insertAccount {
+  @apply p-4 bg-white rounded-lg;
+}
+
+/* Add this to your global stylesheet, e.g., main.module.css */
+.switch-custom {
+  --switch-bg-color: #ec4899; /* Tailwind CSS color for pink */
+  --switch-knob-color: #fff;
+}
+
+.switch-custom .switch-inner {
+  background-color: var(--switch-bg-color);
+}
+
+.switch-custom .switch-knob {
+  background-color: var(--switch-knob-color);
+}
+@keyframes blink {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.blink {
+  animation: blink 2s infinite;
+}
+/* Close button style */
+.closeButton {
+  @apply text-k-Cream-default cursor-pointer;
+}
+
+.accountGroupingRow {
+  @apply flex items-center justify-between mt-4 px-4 py-2 rounded-lg;
+}
+
+.iconWrapper {
+  @apply flex items-center justify-center w-10 h-10 rounded-full bg-k-Cream-default;
+}
+
+.accountDataRow {
+  @apply flex items-center justify-between px-4 py-2 rounded-lg;
+}
+
+.button {
+  @apply bg-k-Green-default  hover:bg-k-Green-400 text-k-Cream-default rounded font-bold py-2 px-4 cursor-pointer;
+  @apply mr-2;
+}
+
+.icon {
+  @apply text-k-Green-default hover:text-k-Green-200 cursor-pointer;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  /* .contentWrapper { */
+  /*   @apply ml-2 p-4; /\* Added margin-top for vertical spacing *\/ */
+  /* } */
+
+  .sidebarWrapper {
+    @apply w-7; /* Added top margin for vertical spacing */
+  }
+
+  .sidebar {
+    @apply w-full; /* Full width on medium screens */
+  }
+}
+
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: 0.4s;
+  border-radius: 34px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: 0.4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: #4a9079;
+}
+
+input:checked + .slider:before {
+  transform: translateX(26px);
+}
+.chartContainer {
+  position: relative;
+  z-index: 10;
+  transition: none !important;
+  animation: none !important;
+}
