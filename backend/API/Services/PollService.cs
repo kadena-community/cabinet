@@ -1,9 +1,9 @@
 using System.Text.Json;
 using Dab.API.Interfaces;
-using Dab.API.Models;
 using Dab.API.Models.Poller;
 using Dab.API.Models.Cache;
 using Dab.API.AppSettings;
+using AutoMapper;
 
 namespace Dab.API.Services;
 
@@ -15,10 +15,12 @@ public class PollService : IPollService
     private readonly DabContractConfig _dabConfig;
     private readonly string chain;
     private readonly string ns;
+    private readonly IMapper _mapper;
     private readonly int expirySeconds = 20;
 
-    public PollService(ILogger<PollService> logger, ICacheService cacheService, IPactService pactService, IConfiguration configuration)
+    public PollService(ILogger<PollService> logger, ICacheService cacheService, IMapper mapper, IPactService pactService, IConfiguration configuration)
     {
+        _mapper = mapper;
         _logger = logger;
         _cacheService = cacheService;
         _pactService = pactService;
@@ -75,18 +77,18 @@ public class PollService : IPollService
         }
         }
 
-            public async Task<List<Poll>> GetAllPolls(bool ignoreCache = false)
+    public async Task<List<Poll>> GetAllPolls(bool ignoreCache = false)
     {
-                try
+        try
         {
-    var cacheKey = CacheKeys.AllPolls();
+            var cacheKey = CacheKeys.AllPolls();
 
             if (!ignoreCache && await _cacheService.HasItem(cacheKey))
             {
                 var cached = await _cacheService.GetItem<string>(cacheKey);
                 return JsonSerializer.Deserialize<List<Poll>>(cached) ?? new();
             }
-            var code = $"(select {ns}.poller.polls (constantly true))";
+            var code = $"({ns}.poller.read-all-polls)";
             var resp = await _pactService.RunLocalCommand(chain, code);
 
             await _cacheService.SetItem(cacheKey, Utils.JsonPrettify(resp), expirySeconds);
@@ -101,7 +103,7 @@ public class PollService : IPollService
 
     }
 
-            public async Task<List<PollVote>> GetAllVotes(bool ignoreCache = false)
+    public async Task<List<PollVote>> GetAllVotes(bool ignoreCache = false)
     {
                 try
         {
@@ -271,17 +273,22 @@ public class PollService : IPollService
 
             var votes = await GetAllAccountVotes(account, ignoreCache);
             var polls = await GetAccountVotedPolls(account, ignoreCache);
-            var pollingPower = await GetMaxPollingPower(account, ignoreCache);
+            var pollsDto = _mapper.Map<List<PollDTO>>(polls);
+            var results = new List<bool?>();
+            foreach(var v in votes)
+            {
+
+                results.Add(Utils.GetElectionResultForVote(v, pollsDto));
+
+            }
 
             var stats = new AccountVoteStats
             {
                 Account = account,
                 TotalVotes = votes.Count(),
-                VotesYes = votes.Where(e => e.Action == "approved").Count(),
-                VotesNo = votes.Where(e => e.Action == "refused").Count(),
-                Abstentions = votes.Where(e => e.Action == "abstention").Count(),
-                CurrentPollingPower = pollingPower,
-
+                OngoingVotes = results.Where(e => e == null).Count(),
+                VotesWon = results.Where(e => e == true).Count(),
+                VotesLost = results.Where(e => e == false).Count()
             };
             await _cacheService.SetItem(cacheKey, Utils.JsonPrettify(stats), expirySeconds);
             return stats;

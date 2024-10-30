@@ -1,9 +1,8 @@
 // types.ts
 export enum PollStatus {
   Open = 0,
-  Approved = 1,
-  Refused = 2,
-  Review = 3,
+  Closed = 1,
+  Review = 2,
 }
 
 export interface PollDTO {
@@ -13,15 +12,19 @@ export interface PollDTO {
   pollId: string;
   creationTime: string;
   bondId: string;
-  votesYes: number;
-  votesNo: number;
-  votesAbstentions: number;
+  pollOptions: PollOption[];
   electionStart: string;
   electionEnd: string;
   quorum: number;
   votesQuorum: number;
   numberVotes: number;
   status: PollStatus;
+}
+
+export interface PollOption {
+  optionIndex: number;
+  optionName: string;
+  votesPollingPower: number;
 }
 
 export interface PollVoted {
@@ -36,6 +39,7 @@ export interface PollVoteDTO {
   PollingPower: number;
   Action: string;
   Account: string;
+  1500: 500;
   Date: Date;
   PollId: string;
 }

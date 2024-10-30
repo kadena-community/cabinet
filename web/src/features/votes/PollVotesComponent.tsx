@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import {
@@ -8,8 +10,11 @@ import {
 import { shortenKAddress } from "../../utils/kadenaHelper";
 import styles from "../../styles/main.module.css";
 import CopyButton from "./CopyButton";
+import { Dropdown } from "@/features/components/Dropdown";
+import { OptionType } from "@/features/components/Dropdown/types";
+import { PollDTO } from "@/features/poll/types";
 
-const PollVotesComponent: React.FC<{ pollId: string }> = ({ pollId }) => {
+const PollVotesComponent: React.FC<{ poll: PollDTO }> = ({ poll }) => {
   const dispatch = useAppDispatch();
   const pollVotes = useAppSelector(selectPollVotes);
   const pollVotesTotalItems = useAppSelector(selectPollVotesTotalItems);
@@ -17,18 +22,34 @@ const PollVotesComponent: React.FC<{ pollId: string }> = ({ pollId }) => {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [sortByPollingPower, setSortByPollingPower] = useState(false);
-  const [actionFilter, setActionFilter] = useState<number | string>("");
+  const [actionFilter, setActionFilter] = useState<OptionType>({
+    name: "All",
+    value: -1,
+  });
   const [searchTerm, setSearchTerm] = useState("");
 
+  // Helper function to map poll options to OptionType
+  const getPollOptionType = (option: any): OptionType => {
+    return { value: option.optionIndex, name: option["option-name"] as string };
+  };
+
+  // Map the poll options dynamically for the dropdown
+  const pollDropdownOptions = [
+    { name: "All", value: -1 },
+    ...poll.pollOptions?.map((option) => getPollOptionType(option)),
+  ];
+
+  // Fetch poll votes based on the current state
   const fetchVotes = () => {
     dispatch(
       fetchPollVotes({
-        pollId,
+        pollId: poll.pollId,
         page,
         pageSize,
         sortByPollingPower,
         ignoreCache: false,
-        actionFilter: actionFilter === null ? "" : actionFilter,
+        actionFilter:
+          (actionFilter.value as number) < 0 ? "" : actionFilter.name,
         search: searchTerm,
       }),
     );
@@ -38,7 +59,7 @@ const PollVotesComponent: React.FC<{ pollId: string }> = ({ pollId }) => {
     fetchVotes();
   }, [
     dispatch,
-    pollId,
+    poll,
     page,
     pageSize,
     sortByPollingPower,
@@ -46,6 +67,7 @@ const PollVotesComponent: React.FC<{ pollId: string }> = ({ pollId }) => {
     searchTerm,
   ]);
 
+  // Event handlers
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
     setPage(1);
@@ -56,26 +78,8 @@ const PollVotesComponent: React.FC<{ pollId: string }> = ({ pollId }) => {
     setPage(1);
   };
 
-  const handleFilterChange = (filter: number | string) => {
-    setActionFilter(filter);
-    setPage(1);
-  };
-
   const handleShowMore = () => {
     setPageSize(pageSize + 10);
-  };
-
-  const getActionColor = (action: string) => {
-    switch (action) {
-      case "approved":
-        return "text-k-Green-default";
-      case "refused":
-        return "text-k-Pink-default";
-      case "abstention":
-        return "text-k-Orange-default";
-      default:
-        return "";
-    }
   };
 
   return (
@@ -95,40 +99,21 @@ const PollVotesComponent: React.FC<{ pollId: string }> = ({ pollId }) => {
           <span className="mr-2 font-kadena">
             Total Votes: {pollVotesTotalItems}
           </span>
-          <button
-            className={`${styles.buttonAll} border border-white text-k-Cream-default bg-k-Blue-default hover:bg-k-Blue-400`}
-            onClick={() => handleFilterChange("")}
-          >
-            All
-          </button>
-          <button
-            className={`${styles.buttonApprove}`}
-            onClick={() => handleFilterChange(0)}
-          >
-            Approved
-          </button>
-          <button
-            className={`${styles.buttonReject} bg-k-Pink-default hover:bg-k-Pink-400`}
-            onClick={() => handleFilterChange(1)}
-          >
-            Refused
-          </button>
-          <button
-            className={`${styles.buttonAbstain}`}
-            onClick={() => handleFilterChange(2)}
-          >
-            Abstention
-          </button>
+          <Dropdown
+            options={pollDropdownOptions}
+            currentOption={actionFilter}
+            setCurrentOption={setActionFilter}
+          />
         </div>
         <button className={styles.buttonApprove} onClick={handleSortToggle}>
-          Sort by {sortByPollingPower ? "Date" : "Polling Power"}
+          Sort by {sortByPollingPower ? "Date" : "Voting Power"}
         </button>
       </div>
       <div className="space-y-4">
         <div className="flex flex-wrap justify-between mb-2 px-2">
           <span className="flex-1 w-full sm:w-auto">Account</span>
           <span className="flex-1 w-full sm:w-auto">Action</span>
-          <span className="flex-1 w-full sm:w-auto">Polling Power</span>
+          <span className="flex-1 w-full sm:w-auto">Voting Power</span>
           <span className="flex-1 w-full sm:w-auto">Date</span>
         </div>
         {pollVotes.length === 0 ? (
@@ -137,28 +122,24 @@ const PollVotesComponent: React.FC<{ pollId: string }> = ({ pollId }) => {
           pollVotes.map((vote, index) => (
             <div
               key={index}
-              className={`innerCard flex flex-wrap sm:flex-row items-start sm:items-center justify-between`}
+              className="innerCard flex flex-wrap sm:flex-row items-start sm:items-center justify-between"
             >
               <div className="flex-1 w-full sm:w-auto px-2 flex items-center">
-                <p className={`${styles.cardComment}`}>
+                <p className={styles.cardComment}>
                   {shortenKAddress(vote.account)}
                 </p>
                 <CopyButton toCopy={vote.account} iconSize={16} />
               </div>
               <div className="flex-1 w-full sm:w-auto px-2">
-                <p
-                  className={`${styles.cardItem} ${getActionColor(vote.action)}`}
-                >
-                  {vote.action}
-                </p>
+                <p className={styles.cardItem}>{vote.action}</p>
               </div>
-              <div className="flex-1 w-full sm:w-auto  px-2">
-                <p className={`${styles.cardItem}`}>
+              <div className="flex-1 w-full sm:w-auto px-2">
+                <p className={styles.cardItem}>
                   {vote.pollingPower.toLocaleString()}
                 </p>
               </div>
               <div className="flex-1 w-full sm:w-auto px-2">
-                <p className={`${styles.cardItem}`}>
+                <p className={styles.cardItem}>
                   {new Date(vote.date).toLocaleString()}
                 </p>
               </div>

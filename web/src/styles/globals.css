@@ -81,7 +81,7 @@
 }
 
 .card {
-  @apply bg-k-Cream-400 rounded-lg shadow-lg gap-4 p-4 dark:bg-k-Blue-100 sm:w-full ;
+  @apply bg-k-Cream-400 rounded-lg shadow-lg gap-4 p-4 dark:bg-k-Blue-100 sm:w-full;
 }
 
 .innerCard {

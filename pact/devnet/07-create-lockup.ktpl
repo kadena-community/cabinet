@@ -5,7 +5,7 @@ signers:
       - name: coin.GAS
         args: []
       - name: coin.TRANSFER
-        args: ["{{{user-account}}}",  "bonder-bank", 50.0]
+        args: ["{{{user-account}}}",  "{{{bonder-bank-account}}}", 50.0]
 publicMeta:
   chainId: "{{{chain}}}"
   gasLimit: 100000

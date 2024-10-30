@@ -37,12 +37,15 @@
       (enforce is-bonder "This account isn't a bonder")))
 
   ;; Schemas and tables
+
+  (defschema poll-option
+      option-index: integer
+      option-name: string
+      votes-polling-power: decimal)
+
   (defschema poll
       @doc "Tracks proposals created by CAB Core Members"
       @model [
-              (invariant (>= votes-yes 0.0))
-              (invariant (>= votes-no 0.0))
-              (invariant (>= votes-abstentions 0.0))
               (invariant (> election-end creation-time))
               ]
       title:string
@@ -51,9 +54,7 @@
       poll-id:string ;; same as index, stored for convenience
       creation-time:time
       bond-id: string
-      votes-yes:decimal
-      votes-no:decimal
-      votes-abstentions:decimal
+      options:[object{poll-option}]
       election-start:time
       election-end:time
       number-votes:integer
@@ -211,9 +212,8 @@
   (defun get-polling-power:decimal
       (account:string
        poll-id:string)
-    @doc "Retrieves bonder's polling power. The polling power is the \
-  \ sum of all the polling powers coming from bonds associated with the poll. Only lockups \
-  \ that were active at the time of poll creation will count."
+    @doc "Retrieves bonder's polling power from a specified lockup.\
+    \ Only lockups that were active at the time of poll creation will count."
     @model [(property (> result 0.0))]
     (let* (
            (bond (at 'bond-id (read-poll poll-id)))
@@ -222,13 +222,43 @@
       )
     )
 
+
+  (defun validate-option-name (option-name:string)
+    @doc "Enforces the properties required for an option name"
+    (enforce (is-charset CHARSET_ASCII option-name) "ASCII characters only")
+    (enforce (>= (length option-name) 2) "Option name too short")
+    (enforce (<= (length option-name) 30) "Option name too long")
+    )
+
+
+  (defun compose-poll-option:object{poll-option} (option-name:string  index:integer)
+         @doc "Composes a new poll option given an option name and an index"
+         (require-capability (INTERNAL))
+         (validate-option-name option-name)
+         {
+          'option-index: index,
+          'option-name: option-name,
+          'votes-polling-power: 0.0
+          }
+         )
+
+  (defun compose-poll-options:[object{poll-option}] (option-names:[string])
+         @doc "Composes poll options from a list of names"
+         (enforce (>= (length option-names) 2) "A poll needs to have at least 2 options")
+         (let ((indexes (enumerate 0 (length option-names))))
+           (zip (lambda (x y) (compose-poll-option x y)) option-names indexes)
+           )
+         )
+
   ;; Main contract entry points
   (defun create-poll:string
       (account:string
        title:string
        bond-id:string
        description:string
+       option-names:[string]
        )
+
     @doc "Create a poll (CAB Core agents only)"
     (enforce-contract-unlocked)
     (with-capability (CREATE_POLL account title bond-id description)
@@ -242,172 +272,133 @@
              (votes-quorum:integer (compute-poll-votes-quorum bond-id))
              (is-bond-active:bool (> (at 'active-bonders (read-bond bond-id)) 0))
              )
-
+        (enforce (>= 10 (length option-names)) "A poll cannot have more than 10 options")
         (enforce is-bond-active "You can only create polls for active bonds")
 
-        (let ((new-poll:object{poll}
-                {
-                 'title: title,
-                 'description: description,
-                 'author: account,
-                 'creation-time: now,
-                 'bond-id: bond-id,
-                 'poll-id: poll-id,
-                 'election-start: start-time,
-                 'votes-yes: 0.0,
-                 'votes-no: 0.0,
-                 'votes-abstentions: 0.0,
-                 'election-end: end-time,
-                 'quorum: quorum,
-                 'number-votes: 0,
-                 'votes-quorum: votes-quorum
-                 }))
+        (with-capability (INTERNAL)
+          (let ((new-poll:object{poll}
+                  {
+                   'title: title,
+                   'description: description,
+                   'author: account,
+                   'creation-time: now,
+                   'bond-id: bond-id,
+                   'poll-id: poll-id,
+                   'election-start: start-time,
+                   'election-end: end-time,
+                   'options: (compose-poll-options option-names),
+                   'quorum: quorum,
+                   'number-votes: 0,
+                   'votes-quorum: votes-quorum
+                   })
+                )
+            (insert polls poll-id new-poll)
+            )
 
-          (insert polls poll-id new-poll)
-          )
+          (increment-polls-counter))
 
         ;; increment number of polls in active bonds
         (with-capability (BONDER_NOTIFY)
           (register-new-poll bond-id)
           )
 
-        (with-capability (INTERNAL)
-          (increment-polls-counter))
 
         (format "Poll {} - until {} has been created" [poll-id (format-time "%c" end-time)]))))
 
-  (defun poll-vote-helper:string
+
+  (defun read-poll-options:[object{poll-option}] (poll-id:string)
+         @doc "Read all the poll options"
+         (at 'options (read-poll poll-id)))
+
+  (defun read-poll-option:object{poll-option} (poll-id:string index:integer)
+         @doc "Read the poll option with the given index"
+         (let
+             (
+              (options:[object{poll-option}] (filter (where 'option-index (= index)) (read-poll-options poll-id)))
+              )
+           (enforce (= 1 (length options)) "Option not found")
+           (at 0 options)
+           ))
+
+  (defun update-poll-option:[object{poll-option}] (poll-id option-index vp)
+         @doc "Update the option with the given index and add vp to the votes"
+         (let*
+             (
+              (options (read-poll-options poll-id))
+              (old-option (read-poll-option  poll-id option-index))
+              (new-option {
+                           'option-index: option-index
+                           , 'option-name: (at 'option-name old-option)
+                           , 'votes-polling-power: (+ (at 'votes-polling-power old-option) vp)
+                           } )
+              )
+           (map (lambda (x) (if (= x old-option) new-option x)) options)
+           )
+         )
+
+  (defun vote:string
       (account:string
        poll-id:string
-       action:string
-       polling-power:decimal)
-    @doc "Helper function for inserting vote of an account on a poll"
-    (require-capability (INTERNAL))
+       option-index:integer)
 
-    (enforce (> polling-power 0.0) "You cannot vote")
+    @doc "Vote in a poll selecting the option via index. Only Bonders can perform this action."
 
-    (let ((bond-id:string (at 'bond-id (read-poll poll-id))))
-
-      (with-read polls poll-id {
-                                'number-votes := number-votes
-                                }
-                 (update polls poll-id
-                         {'number-votes: (+ number-votes 1)})
-                 )
-
-      (with-capability (BONDER_NOTIFY)
-        (register-poll-interaction account poll-id))
-
-      (insert poll-votes (votes-table-key account poll-id)
-              {
-               'poll-id: poll-id,
-               'account :account,
-               'polling-power: polling-power,
-               'bond-id: bond-id,
-               'action: action,
-               'date: (chain-time)
-               })
-      ))
-
-  (defconst VOTE_APPROVED "approved")
-  (defconst VOTE_REFUSED "refused")
-  (defconst VOTE_ABSTAIN "abstention")
-
-  (defun vote-approved:string
-      (account:string
-       poll-id:string)
-    @doc "Vote in a poll as approved. Only Bonders can perform this action."
     (enforce-contract-unlocked)
-    (with-capability (VOTE account poll-id VOTE_APPROVED)
-      (with-capability (INTERNAL)
-        (let (
-              (vp (get-polling-power account poll-id))
-              )
-          (enforce (> vp 0.0)
-                   "This account does not have polling power")
-          (with-read polls poll-id {
-                                    'votes-yes := tot-approved
-                                    }
-                     (update polls poll-id
-                             {'votes-yes: (+ tot-approved (floor vp 2))})
-                     )
-          (poll-vote-helper account poll-id VOTE_APPROVED vp)
-          (format "Account {} APPROVED the '{}' poll" [account poll-id])
-          )
+    (let* (
+           (poll-option (read-poll-option poll-id option-index))
+           (bond-id:string (at 'bond-id (read-poll poll-id)))
+           (vp (get-polling-power account poll-id))
+           )
+      (with-capability (VOTE account poll-id (at 'option-name poll-option))
+        (enforce (> vp 0.0)
+                 "This account does not have polling power")
+        (update polls poll-id
+                {'options: (update-poll-option poll-id option-index vp)})
+
+        (with-read polls poll-id {
+                                  'number-votes := number-votes
+                                  }
+                   (update polls poll-id
+                           {'number-votes: (+ number-votes 1)})
+                   )
+
+        (insert poll-votes (votes-table-key account poll-id)
+                {
+                 'poll-id: poll-id,
+                 'account :account,
+                 'polling-power: vp,
+                 'bond-id: bond-id,
+                 'action: (at 'option-name poll-option),
+                 'date: (chain-time)
+                 })
         )
       )
+
+    (with-capability (BONDER_NOTIFY)
+      (register-poll-interaction account poll-id))
+
     )
 
 
-  (defun vote-refused:string
-      (account:string
-       poll-id:string)
-    @doc "Vote in a poll as refused. Only Bonders can perform this action."
-    (enforce-contract-unlocked)
-    (with-capability (VOTE account poll-id VOTE_REFUSED)
-      (with-capability (INTERNAL)
-        (let (
-              (vp (get-polling-power account poll-id))
-              )
-          (enforce (> vp 0.0)
-                   "This account does not have polling power")
-          (with-read polls poll-id {
-                                    'votes-no := tot-refused
-                                    }
-                     (update polls poll-id
-                             {'votes-no: (+ tot-refused (floor vp 2))})
-                     )
-          (poll-vote-helper account poll-id VOTE_REFUSED vp)
-          (format "Account {} REFUSED the '{}' poll" [account poll-id])
-          )
-        )
-      )
-    )
-
-
-  (defun vote-abstain:string
-      (account:string
-       poll-id:string)
-    @doc "Abstain from voting in a poll. Only Bonders can perform this action."
-    (enforce-contract-unlocked)
-    (with-capability (VOTE account poll-id VOTE_ABSTAIN)
-      (with-capability (INTERNAL)
-        (let (
-              (vp (get-polling-power account poll-id))
-              )
-          (enforce (> vp 0.0)
-                   "This account does not have polling power")
-          (with-read polls poll-id {
-                                    'votes-abstentions := tot-abs
-                                    }
-                     (update polls poll-id
-                             {'votes-abstentions: (+ tot-abs (floor vp 2))})
-                     )
-          (poll-vote-helper account poll-id VOTE_ABSTAIN vp)
-          (format "Account {} ABSTAINED from '{}' poll" [account poll-id])
-          )
-        )
-      )
-    )
-
-
-  (defun is-poll-approved:bool
+  (defun read-poll-results:string
       (poll-id:string)
-    @doc "Returns true if a poll has been approved by election. Fails if poll is not finished"
+    @doc "Returns the name of the winning option for a given poll. Returns \"Rejected by quorum\" if the quorum is not met."
     (with-read polls poll-id
       {
        'election-end := end-time,
-       'votes-abstentions := abstentions,
-       'votes-yes := yes,
-       'votes-no := no,
+       'options :=  poll-options,
        'quorum := quorum,
        'number-votes := votes,
        'votes-quorum := votes-quorum
        }
       (enforce-guard (at-after-date end-time))
-      (and (>= votes votes-quorum)
-           (and (> yes no) (>= (+ (+ yes no) abstentions) quorum))
-           )
+      (let (
+            (votes-quorum-passed (>= votes votes-quorum))
+            (quorum-passed (>= (fold (+) 0.0 (map  (at 'votes-polling-power) poll-options)) quorum))
+            (most-voted-option:object{poll-option} (at 0 (reverse (sort ['votes-polling-power] poll-options))))
+            )
+        (if (and quorum-passed votes-quorum-passed) (at 'option-name most-voted-option) "Rejected by quorum")
+        )
       ))
 
   (defun read-account-created-polls:[object{poll}]

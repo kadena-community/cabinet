@@ -10,6 +10,7 @@ import {
 } from "recharts";
 import { useAppSelector } from "@/app/hooks";
 import { selectLockupSummaryBar, selectDisplayAmount } from "./bondSlice";
+import styles from "@/styles/main.module.css";
 import { LockupDailyAmount } from "./types";
 import {AppLoader} from '@/features/components/Loader';
 
@@ -17,6 +18,23 @@ const COLORS = {
   amount: "#4A9079",
   lockupCount: "#E41968",
 };
+
+const CustomTooltip: React.FC<CustomTooltipProps> = ({
+  active,
+  payload,
+  label,
+}) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className={styles.analyticsTooltip}>
+        <p>{`${label} : ${payload[0].value.toLocaleString()} KDA`}</p>
+      </div>
+    );
+  }
+  return null;
+};
+
+
 
 const LockupsOverTimeBarChart: React.FC = () => {
   const lockupSummaryBar = useAppSelector(selectLockupSummaryBar) || [];
@@ -56,7 +74,7 @@ const LockupsOverTimeBarChart: React.FC = () => {
             tick={{ fill: "var(--color-axis)" }}
             axisLine={{ stroke: "var(--color-axis)"}}
           />
-          <Tooltip />
+          <Tooltip content={<CustomTooltip />} />
           <Area
             type="monotone"
             dataKey={displayAmount ? "amount" : "lockupCount"}

@@ -5,7 +5,7 @@ signers:
       - name: coin.GAS
         args: []
       - name: coin.TRANSFER
-        args: ["{{{admin-account}}}", "bonder-bank", 100000.0]
+        args: ["{{{admin-account}}}", "{{{bonder-bank-account}}}", 100000.0]
 data:
   ns: "{{{ns}}}"
   ns-admin-keyset:

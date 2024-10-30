@@ -11,6 +11,7 @@ import {
 } from "recharts";
 import { useAppSelector } from "@/app/hooks";
 import { selectLockupDensity } from "./bondSlice";
+import styles from "@/styles/main.module.css";
 
 const COLORS: string[] = [
   "#4A9079",
@@ -23,10 +24,27 @@ const COLORS: string[] = [
 
 const LockupDensityChart: React.FC = () => {
   const lockupDensity = useAppSelector(selectLockupDensity) || [];
+    //console.log(lockupDensity);
 
   if (!lockupDensity.length) {
     return <div>Loading...</div>;
   }
+
+  const CustomTooltip: React.FC<CustomTooltipProps> = ({
+  active,
+  payload,
+  label,
+}) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className={styles.analyticsTooltip}>
+        <p>{`${label} : ${payload[0].value.toLocaleString()} lockups`}</p>
+      </div>
+    );
+  }
+  return null;
+};
+
 
   return (
     <div>
@@ -40,7 +58,7 @@ const LockupDensityChart: React.FC = () => {
             tick={{ fill: "var(--color-axis)" }}
             axisLine={{ stroke: "var(--color-axis)"}}
           />
-          <Tooltip />
+          <Tooltip content={<CustomTooltip />}/>
           <Bar dataKey="density" fill={COLORS[0]} />
         </BarChart>
       </ResponsiveContainer>

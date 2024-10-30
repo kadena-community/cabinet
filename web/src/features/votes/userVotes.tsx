@@ -93,7 +93,7 @@ const UserVotes: React.FC<UserVotesProps> = ({ account }) => {
               <div className="grid grid-cols-4 mb-4 px-2">
                 <span className="flex-1">Poll ID</span>
                 <span className="flex-1 ml-5">Action</span>
-                <span className="flex-1">Polling Power</span>
+                <span className="flex-1">Voting Power</span>
                 <span className="flex-1">Date</span>
               </div>
 
@@ -106,15 +106,11 @@ const UserVotes: React.FC<UserVotesProps> = ({ account }) => {
                     onClick={() => handleOpenDetailsModal(vote.PollId)}
                   >
                     <div className="flex-1 flex items-center">
-                      <p className={`${styles.cardComment}`}>
-                        {vote.PollId}
-                      </p>
-                      <CopyButton toCopy={vote.PollId} iconSize={16} />
+                      <p className={`${styles.cardComment}`}>{vote.PollId}</p>
+                      {/* <CopyButton toCopy={vote.PollId} iconSize={16} /> */}
                     </div>
                     <div className="flex-1">
-                      <p className={`${styles.cardItem} ${getActionColor(vote.Action)}`}>
-                        {vote.Action}
-                      </p>
+                      <p className={`${styles.cardItem}`}>{vote.Action}</p>
                     </div>
                     <div className="flex-1">
                       <p className={`${styles.cardItem}`}>

@@ -8,7 +8,7 @@ import {
   selectAccountVoteStatus,
   fetchCanAccountVoteMultiple,
 } from "./pollSlice";
-import { PollDTO, PollVoteDTO, PollVoted } from "./types";
+import { PollDTO, PollVoteDTO, PollVoted, PollStatus } from "./types";
 import PollModal from "./pollModal";
 import PollDetailsModal from "../votes/pollVotes";
 import { useKadenaReact } from "@/kadena/core";
@@ -52,7 +52,7 @@ const Polls: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<OptionType>({
     name: "All",
-    value: 0,
+    value: "",
   });
   const [bondFilter, setBondFilter] = useState<OptionType>({
     name: "All",
@@ -65,13 +65,12 @@ const Polls: React.FC = () => {
   const account = kda.account?.account;
 
   useEffect(() => {
-    console.log(bondDropdownOptions);
     dispatch(
       fetchAllPolls({
         page,
         pageSize,
         search: searchTerm,
-        status: statusFilter.value == 0 ? "" : (statusFilter.value as number),
+        status: statusFilter.value === "" ? "" : (statusFilter.value as number),
         bond: bondFilter.value === "All" ? "" : (bondFilter.value as string),
         ignoreCache: false,
       }),
@@ -111,47 +110,67 @@ const Polls: React.FC = () => {
         userVotes.map((vote: PollVoteDTO) => vote.PollId),
       );
 
-      const pollStatuses = allPolls.map((poll) => {
-        const voted = votedPollsSet.has(poll.pollId);
-        let errorMessage;
-        let action;
+      const pollStatuses = allPolls
+        .slice() // Create a copy of the array
+        .sort(
+          (a, b) =>
+            new Date(b.creationTime).getTime() -
+            new Date(a.creationTime).getTime(),
+        ) // Sort by creationTime (latest first)
+        .map((poll) => {
+          const voted = votedPollsSet.has(poll.pollId);
+          let errorMessage;
+          let action;
 
-        if (voted) {
-          const userVote = userVotes.find(
-            (vote: PollVoteDTO) => vote.PollId === poll.pollId,
-          );
-          action = userVote?.Action;
-        }
-
-        if (poll.status === 0) {
           if (voted) {
-            errorMessage = undefined; // Clear error message if voted
-          } else if (!accountVoteStatus[poll.pollId]) {
-            errorMessage = "Outside your lockup";
+            const userVote = userVotes.find(
+              (vote: PollVoteDTO) => vote.PollId === poll.pollId,
+            );
+            action = userVote?.Action;
           }
-        } else {
-          if (!voted) {
-            errorMessage = "Poll closed";
+
+          if (poll.status === PollStatus.Open) {
+            if (voted) {
+              errorMessage = undefined; // Clear error message if voted
+            } else if (!accountVoteStatus[poll.pollId]) {
+              errorMessage = "Outside your lockup";
+            }
+          } else if (poll.status === PollStatus.Review) {
+            errorMessage = "Poll under review";
+          } else {
+            if (!voted) {
+              errorMessage = "Poll closed";
+            }
           }
-        }
 
-        return {
-          poll,
-          voted,
-          errorMessage,
-          action,
-        };
-      });
+          return {
+            poll,
+            voted,
+            errorMessage,
+            action,
+          };
+        });
 
-      pollStatuses.sort((a, b) => Number(a.voted) - Number(b.voted));
+      pollStatuses.sort((a, b) => Number(a.voted) - Number(b.voted)); // Maintain sorting by vote status as well if needed
       setPollsVoted(pollStatuses);
     } else {
-      const initialVotes = allPolls.map((poll) => ({
-        poll,
-        voted: false,
-        errorMessage:
-          poll.status === 0 ? "Connect wallet to vote" : "Poll closed",
-      }));
+      const initialVotes = allPolls
+        .slice() // Create a copy of the array
+        .sort(
+          (a, b) =>
+            new Date(b.creationTime).getTime() -
+            new Date(a.creationTime).getTime(),
+        ) // Sort by creationTime (latest first)
+        .map((poll) => ({
+          poll,
+          voted: false,
+          errorMessage:
+            poll.status === PollStatus.Open
+              ? "Connect wallet to vote"
+              : poll.status === PollStatus.Review
+                ? "Poll under review"
+                : "Poll closed",
+        }));
       setPollsVoted(initialVotes);
     }
   }, [userVotes, allPolls, kda, accountVoteStatus]);
@@ -207,21 +226,22 @@ const Polls: React.FC = () => {
   const getButtonColor = (
     errorMessage: string | undefined,
     action: string | undefined,
+    pollStatus: PollStatus,
   ) => {
-    if (
-      errorMessage === "Poll closed" ||
-      errorMessage === "Connect wallet to vote" ||
-      errorMessage === "Outside your lockup"
-    ) {
-      return "bg-gray-400";
-    } else if (action === "approved") {
-      return "bg-k-Green-default";
-    } else if (action === "abstention") {
-      return "bg-k-Orange-default";
-    } else if (action === "refused") {
-      return "bg-k-Pink-default";
+    if (pollStatus === PollStatus.Closed) {
+      return "bg-gray-400"; // Poll is closed
+    } else if (pollStatus === PollStatus.Review) {
+      return "bg-k-Pink-default"; // Poll is under review
+    } else if (pollStatus === PollStatus.Open) {
+      if (errorMessage) {
+        return "bg-gray-400"; // Error (e.g., outside lockup, poll closed)
+      } else if (action) {
+        return "bg-k-Orange-default"; // User has already voted
+      } else {
+        return "bg-k-Green-default"; // Default state for voting
+      }
     } else {
-      return "bg-k-Green-default"; // Default button color for "Vote in poll"
+      return "bg-gray-400"; // Default fallback for any other case
     }
   };
 
@@ -257,9 +277,9 @@ const Polls: React.FC = () => {
 
   const statusDropdownOptions = [
     { name: "All", value: "" },
-    { name: "Open", value: 0 },
-    { name: "Approved", value: 1 },
-    { name: "Refused", value: 2 },
+    { name: "Open", value: PollStatus.Open },
+    { name: "Closed", value: PollStatus.Closed },
+    { name: "Review", value: PollStatus.Review },
   ];
 
   function formatLockupId(id: string) {
@@ -278,7 +298,7 @@ const Polls: React.FC = () => {
   const getBondOption = (bond: Bond) => {
     return {
       name: formatLockupId(bond.bondId),
-      value: formatLockupId(bond.bondId),
+      value: bond.bondId,
     } as OptionType;
   };
 
@@ -337,7 +357,7 @@ const Polls: React.FC = () => {
             pollsVoted.map((p) => (
               <div
                 key={p?.poll.pollId}
-                className={`card flex flex-col cursor-pointer relative`}
+                className={`card`}
                 onClick={() => handleOpenDetailsModal(p.poll)}
               >
                 <div className="flex flex-row justify-between">
@@ -345,23 +365,23 @@ const Polls: React.FC = () => {
                     #{p.poll.pollId}
                   </p>
                   <span
-                    className={`text-l top-1 right-5 mt-2 ml-2 px-2  rounded text-white ${
-                      p.poll.status === 1
-                        ? "bg-k-Green-default"
-                        : p.poll.status === 0
+                    className={`text-l top-1 right-5 mt-2 ml-2 px-2 rounded text-white ${
+                      p.poll.status === PollStatus.Review
+                        ? "bg-k-Pink-default"
+                        : p.poll.status === PollStatus.Open
                           ? "bg-k-Orange-default"
-                          : p.poll.status === 2
-                            ? "bg-k-Pink-default"
+                          : p.poll.status === PollStatus.Closed
+                            ? "bg-gray-400"
                             : "bg-gray-400"
                     }`}
                   >
-                    {p.poll.status === 3
-                      ? timeRemaining[p.poll.pollId]
-                      : p.poll.status === 0
-                        ? timeRemaining[p.poll.pollId]
-                        : p.poll.status === 1
-                          ? "Approved by CAB"
-                          : "Rejected by CAB"}
+                    {p.poll.status === PollStatus.Review
+                      ? timeRemaining[p.poll.pollId] || "Poll opens in 0s"
+                      : p.poll.status === PollStatus.Open
+                        ? timeRemaining[p.poll.pollId] || "Poll closes in 0s"
+                        : p.poll.status === PollStatus.Closed
+                          ? "Poll closed"
+                          : "Unknown status"}
                   </span>
                 </div>
                 <div>
@@ -378,7 +398,7 @@ const Polls: React.FC = () => {
                 </div>
                 <div className="mt-auto flex justify-between space-x-2">
                   <button
-                    className={`${getButtonColor(p.errorMessage, p.action)} text-white font-bold py-2 px-4 rounded w-40 focus:outline-none focus:shadow-outline`}
+                    className={`${getButtonColor(p.errorMessage, p.action, p.poll.status)} text-white font-bold py-2 px-4 rounded w-40 focus:outline-none focus:shadow-outline`}
                     onClick={(e) => {
                       e.stopPropagation();
                       if (p.errorMessage) {
@@ -432,10 +452,7 @@ const Polls: React.FC = () => {
           poll={activePoll}
           isOpen={isVoteModalOpen}
           onClose={handleCloseVoteModal}
-          onVoteSubmit={(
-            pollId: string,
-            vote: "approved" | "refused" | "abstain",
-          ) => {
+          onVoteSubmit={(pollId: string, vote: number) => {
             handleVote(pollId, vote); // Ensure the vote is one of the expected string literals
             handleCloseVoteModal();
           }}

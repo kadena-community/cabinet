@@ -174,17 +174,17 @@
 (env-chain-data {"block-time": (time "2024-01-15T21:59:00Z")})
 (env-sigs [{'key: "bob", 'caps: []}])
 
-(dab.poller.create-poll "k:bob" "test poll 1" "LOCKUP_SALE-1" "This will be approved after voting")
-(expect "Gas cost of creating a poll" 1046 (env-gas))
+(dab.poller.create-poll "k:bob" "test poll 1" "LOCKUP_SALE-1" "This will be approved after voting" ["Approve" "Reject" "Abstain"])
+(expect "Gas cost of creating a poll" 1249 (env-gas))
 
-(dab.poller.create-poll "k:bob" "test poll 2" "LOCKUP_SALE-1" "This will be rejected by majority")
-(expect "Gas cost of creating a poll for 2nd time in same tx" 2087 (env-gas))
+(dab.poller.create-poll "k:bob" "test poll 2" "LOCKUP_SALE-1" "This will be rejected by majority"["Approve" "Reject" "Abstain"])
+(expect "Gas cost of creating a poll for 2nd time in same tx" 2493 (env-gas))
 
-(dab.poller.create-poll "k:bob" "test poll 3" "LOCKUP_SALE-1" "This will be rejected by quorum")
-(expect "Gas cost of creating a poll for 3rd time in same tx" 3128 (env-gas))
+(dab.poller.create-poll "k:bob" "test poll 3" "LOCKUP_SALE-1" "This will be rejected by quorum" ["Approve" "Reject" "Abstain"])
+(expect "Gas cost of creating a poll for 3rd time in same tx" 3736 (env-gas))
 
-(dab.poller.create-poll "k:bob" "test poll 4" "LOCKUP_SALE-1" "This will be rejected by votes quorum")
-(expect "Gas cost of creating a poll for 4th time in same tx" 4170 (env-gas))
+(dab.poller.create-poll "k:bob" "test poll 4" "LOCKUP_SALE-1" "This will be rejected by votes quorum" ["Approve" "Reject" "Abstain"])
+(expect "Gas cost of creating a poll for 4th time in same tx" 4980 (env-gas))
 
 ;; TODO: others try to create poll in behalf of bond creator
 
@@ -198,10 +198,7 @@
     (
      (poll (dab.poller.read-poll "CAB-1"))
      )
-  (expect "Poll was set up correctly with no votes" true (and
-                                                          (and (= 0.0 (at 'votes-yes poll))
-                                                               (= 0.0 (at 'votes-no poll)))
-                                                          (= 0.0 (at 'votes-abstentions poll))))
+  (expect "Poll was set up correctly with no votes" true (and (= 0.0 (fold (+) 0.0 (map (at 'votes-polling-power) (dab.poller.read-poll-options "CAB-1")))) (= 0 (at 'number-votes poll))))
   ;;NOTE: Here we expect 5 polls and not 4 because there is a 'register-new-poll' call on the transaction above
   (expect "Poll was correctly registered on the bonder side" 5 (at 'total-polls (dab.bonder.read-bond "LOCKUP_SALE-1")))
   )
@@ -219,7 +216,7 @@
 (env-sigs [])
 (expect-failure "No permission to create poll"
                 "Keyset failure"
-                (dab.poller.create-poll "k:bob" "another test poll" "LOCKUP_SALE-1" "this poll introduces a new feature"))
+                (dab.poller.create-poll "k:bob" "another test poll" "LOCKUP_SALE-1" "this poll introduces a new feature" ["Approve" "Reject" "Abstain"]))
 
 (commit-tx)
 
@@ -276,20 +273,21 @@
 (begin-tx "Add a poll to secondary bond")
 (env-chain-data {"block-time": (time "2024-01-28T01:00:00Z")})
 (env-sigs [{'key: "bob", 'caps: []}])
-(dab.poller.create-poll "k:bob" "test poll" "LOCKUP_SALE-2" "This will test the interactions from second bond")
+(dab.poller.create-poll "k:bob" "test poll" "LOCKUP_SALE-2" "This will test the interactions from second bond" ["Approve" "Reject" "Abstain"])
 (commit-tx)
 
 
 (begin-tx "A poll is created after Alice can claim")
 (env-chain-data {"block-time": (time "2024-01-29T01:00:00Z")})
 (env-sigs [{'key: "bob", 'caps: []}])
-(dab.poller.create-poll "k:bob" "test poll 2" "LOCKUP_SALE-2" "This will test the interactions from second bond")
+(dab.poller.create-poll "k:bob" "test poll 2" "LOCKUP_SALE-2" "This will test the interactions from second bond" ["Approve" "Reject" "Abstain"])
 (commit-tx)
+
 
 (begin-tx "Alice can still vote on polls created after she can claim")
 (env-chain-data {"block-time": (time "2024-01-30T01:00:00Z")})
 (env-keys ["alice"])
-(dab.poller.vote-refused "k:alice" "CAB-6")
+(dab.poller.vote "k:alice" "CAB-6" 1)
 (commit-tx)
 
 (begin-tx "Fill claims from secondary bond")
@@ -302,14 +300,14 @@
 (begin-tx "Fill cannot vote on secondary bond poll")
 (env-chain-data {"block-time": (time "2024-02-01T01:00:00Z")})
 (env-keys ["fill"])
-(expect-failure "Cannot vote anymore if you claim" (dab.poller.vote-refused "k:fill" "CAB-5"))
+(expect-failure "Cannot vote anymore if you claim" (dab.poller.vote "k:fill" "CAB-5" 2))
 (commit-tx)
 
 
 (begin-tx "Carl cannot vote on secondary bond poll")
 (env-chain-data {"block-time": (time "2024-02-01T01:00:00Z")})
 (env-keys ["carl"])
-(expect-failure "Cannot vote without a lockup on LOCKUP_SALE-2" (dab.poller.vote-refused "k:carl" "CAB-5"))
+(expect-failure "Cannot vote without a lockup on LOCKUP_SALE-2" (dab.poller.vote "k:carl" "CAB-5" 1))
 (commit-tx)
 
 (begin-tx "Fill locks up again on secondary bond")
@@ -320,38 +318,37 @@
 
 
 (begin-tx "Unhappy path scenarios for voting")
-
 ;; Attempt to vote without necessary capabilities
 (env-sigs []) ;; Incorrectly missing the required capabilities
 (expect-failure "Unauthorized voting - Missing capabilities"
                 "Keyset failure"
-                (dab.poller.vote-approved "k:alice" "CAB-1"))
+                (dab.poller.vote "k:alice" "CAB-1" 0))
 
 ;; Attempt to vote on a poll that does not exist
 (env-sigs [{'key: "tom", 'caps: [(dab.poller.ACCOUNT_GUARD "k:tom")]}])
 (expect-failure "Voting on non-existent poll"
                 "row not found"
-                (dab.poller.vote-approved "k:tom" "non-existent-poll-id"))
+                (dab.poller.vote "k:tom" "non-existent-poll-id"  0))
 
 ;; Attempt to vote by a non-registered user
 (env-sigs [{'key: "nonuser", 'caps: [(dab.poller.ACCOUNT_GUARD "k:nonuser")]}]) ;; Non-existing user in the system
 (expect-failure "Voting by non-registered user"
                 "read: row not found: LOCKUP_SALE-1:::k:nonuser"
-                (dab.poller.vote-abstain "k:nonuser" "CAB-1"))
+                (dab.poller.vote "k:nonuser" "CAB-1" 2))
 
 ;; Voting with an expired poll
 (env-sigs [{'key: "charlie", 'caps: [(dab.poller.ACCOUNT_GUARD "k:charlie")]}])
 (env-chain-data {"block-time": (time "2025-01-01T00:00:00Z")}) ;; Future date beyond poll active period
 (expect-failure "Voting on expired poll"
                 "Chain time must be at or before"
-                (dab.poller.vote-refused "k:charlie" "CAB-1"))
+                (dab.poller.vote "k:charlie" "CAB-1" 1))
 
 ;; Attempt to vote before the poll has started
 (env-sigs [{'key: "fill", 'caps: [(dab.poller.ACCOUNT_GUARD "k:fill")]}])
 (env-chain-data {"block-time": (time "2022-01-01T00:00:00Z")}) ;; Date before poll has started
 (expect-failure "Voting before poll starts"
                 "Chain time must be at or after"
-                (dab.poller.vote-approved "k:fill" "CAB-1"))
+                (dab.poller.vote "k:fill" "CAB-1" 0))
 
 (dab.poller.read-poll "CAB-1")
 (commit-tx)
@@ -375,38 +372,38 @@
      )
 
   ;; Voting - Approved by Alice
-  (dab.poller.vote-approved "k:alice" "CAB-1")
-  (expect "Gas cost of a vote" 1182 (env-gas))
+  (dab.poller.vote "k:alice" "CAB-1" 0)
+  (expect "Gas cost of a vote" 1452 (env-gas))
 
-  (dab.poller.vote-refused "k:alice" "CAB-2")
-  (expect "Gas cost of a 2nd vote in same tx" 2333 (env-gas))
+  (dab.poller.vote "k:alice" "CAB-2" 1)
+  (expect "Gas cost of a 2nd vote in same tx" 2874 (env-gas))
 
-  (dab.poller.vote-refused "k:alice" "CAB-3")
-  (expect "Gas cost of a 3rd vote in same tx" 3484 (env-gas))
+  (dab.poller.vote "k:alice" "CAB-3" 1)
+  (expect "Gas cost of a 3rd vote in same tx" 4296 (env-gas))
 
   ;;  (dab.poller.vote-abstain "k:alice" "CAB-5")
   ;; Voting - Approved by Tom
-  (dab.poller.vote-refused "k:tom" "CAB-1")
-  (dab.poller.vote-refused "k:tom" "CAB-2")
-  (dab.poller.vote-approved "k:tom" "CAB-3")
+  (dab.poller.vote "k:tom" "CAB-1" 1)
+  (dab.poller.vote "k:tom" "CAB-2" 1)
+  (dab.poller.vote "k:tom" "CAB-3" 0)
   ;; (dab.poller.vote-refused "k:tom" "CAB-5")
   ;; Attempt to vote twice by Alice
   (expect-failure  "This account has already voted on this poll"
-                   (dab.poller.vote-approved "k:alice" "CAB-1"))
+                   (dab.poller.vote "k:alice" "CAB-1" 0))
   ;; Voting - Refused by Charlie
-  (dab.poller.vote-approved "k:charlie" "CAB-1")
-  (dab.poller.vote-refused "k:charlie" "CAB-2")
-  (dab.poller.vote-approved "k:charlie" "CAB-4")
+  (dab.poller.vote "k:charlie" "CAB-1" 0)
+  (dab.poller.vote "k:charlie" "CAB-2" 1)
+  (dab.poller.vote "k:charlie" "CAB-4" 0)
   ;; Voting - Abstain by Fill
-  (dab.poller.vote-abstain "k:fill" "CAB-1")
-  (dab.poller.vote-abstain "k:fill" "CAB-2")
-  (dab.poller.vote-approved "k:fill" "CAB-3")
+  (dab.poller.vote "k:fill" "CAB-1" 2)
+  (dab.poller.vote "k:fill" "CAB-2" 2)
+  (dab.poller.vote "k:fill" "CAB-3" 0)
 
-  (expect-failure "Late cannot vote" (dab.poller.vote-abstain "k:late" "CAB-1"))
-  (expect-failure "Late cannot vote" (dab.poller.vote-abstain "k:late" "CAB-2"))
-  (expect-failure "Late cannot vote" (dab.poller.vote-abstain "k:late" "CAB-3"))
-  (expect-failure "Late cannot vote" (dab.poller.vote-abstain "k:late" "CAB-4"))
-  ;;(dab.poller.vote-abstain "k:late" "CAB-5")
+  (expect-failure "Late cannot vote" (dab.poller.vote "k:late" "CAB-1" 2))
+  (expect-failure "Late cannot vote" (dab.poller.vote "k:late" "CAB-2" 2))
+  (expect-failure "Late cannot vote" (dab.poller.vote "k:late" "CAB-3" 2))
+  (expect-failure "Late cannot vote" (dab.poller.vote "k:late" "CAB-4" 2))
+  (dab.poller.vote "k:late" "CAB-5" 2)
   (let (
         (poll-after (dab.poller.read-poll "CAB-1"))
         (tom-vp (dab.poller.get-polling-power "k:tom" "CAB-1"))
@@ -415,50 +412,20 @@
         (fill-vp (dab.poller.get-polling-power "k:fill" "CAB-1"))
         )
     (expect "Votes were correctly computed" true (and (and
-                                                       (= (at 'votes-yes poll-after) (+ (at 'votes-yes poll-before) (+ charlie-vp  alice-vp)))
-                                                       (= (at 'votes-no poll-after) (+ (at 'votes-no poll-before) tom-vp )))
-                                                      (= (at 'votes-abstentions poll-after) (+ (at 'votes-abstentions poll-before) fill-vp))))
-    ;; (expect "Fill's votes were computed on the bonder side" 1 (at 'interactions) )
-    ))
+                                                       (= (at 'votes-polling-power (at 0 (at 'options poll-after))) (+ (at 'votes-polling-power (at 0 (at 'options poll-before))) (+ charlie-vp  alice-vp)))
+                                                       (= (at 'votes-polling-power (at 1 (at 'options poll-after))) (+ (at 'votes-polling-power (at 1 (at 'options poll-before))) tom-vp )))
+                                                      (= (at 'votes-polling-power (at 2 (at 'options poll-after))) (+ (at 'votes-polling-power (at 2 (at 'options poll-before))) fill-vp)))))
+  ;; (expect "Fill's votes were computed on the bonder side" 1 (at 'interactions) )
+  )
 (commit-tx)
 
 
-(begin-tx "Quorum tests")
-(env-chain-data {"block-time": (time "2024-03-01T00:00:00Z")})
-(let* (
-       (cab-1 (dab.poller.read-poll "CAB-1"))
-       (cab-2 (dab.poller.read-poll "CAB-2"))
-       (cab-3 (dab.poller.read-poll "CAB-3"))
-       (cab-4 (dab.poller.read-poll "CAB-4"))
-       ;;NOTE: The voting power these users have will be the same for all polls.
-       ;;The quorums are also the same for all these polls.
-       (tom-vp (dab.poller.get-polling-power  "k:tom" "CAB-1"))
-       (alice-vp (dab.poller.get-polling-power  "k:alice" "CAB-1"))
-       (charlie-vp (dab.poller.get-polling-power "k:charlie" "CAB-1"))
-       (fill-vp (dab.poller.get-polling-power  "k:fill" "CAB-1"))
-       (vp-sum (+ (+ (+ alice-vp tom-vp) charlie-vp) fill-vp))
-       )
-  (expect "Poll CAB-1 was approved" true (dab.poller.is-poll-approved "CAB-1"))
-  (expect "Poll CAB-2 was rejected by majority" true
-          (and (and (>= (at 'number-votes cab-2) (at 'votes-quorum cab-2))
-                    (<= (at 'quorum cab-2) (+ (+
-                                               (at 'votes-yes cab-2)
-                                               (at 'votes-no cab-2))
-                                              (at 'votes-abstentions cab-2))))
-               (= false (dab.poller.is-poll-approved "CAB-2"))))
-  (expect "Poll CAB-3 was rejected by quorum" true
-          (and (and (>= (at 'number-votes cab-3) (at 'votes-quorum cab-3))
-                    (>= (at 'quorum cab-3) (+ (+
-                                               (at 'votes-yes cab-3)
-                                               (at 'votes-no cab-3))
-                                              (at 'votes-abstentions cab-3))))
-               (= false (dab.poller.is-poll-approved "CAB-3"))))
-  (expect "Poll CAB-4 was rejected by votes quorum" true
-          (and (and (<= (at 'number-votes cab-4) (at 'votes-quorum cab-4))
-                    (<= (at 'quorum cab-4) (+ (+
-                                               (at 'votes-yes cab-4)
-                                               (at 'votes-no cab-4))
-                                              (at 'votes-abstentions cab-4))))
-               (= false (dab.poller.is-poll-approved "CAB-4"))))
-  )
+(begin-tx "Reading Poll Results")
+
+(env-chain-data {"block-time": (time "2026-03-01T00:00:00Z")})
+(expect "Poll CAB-1 winning option was approved" "Approve" (dab.poller.read-poll-results "CAB-1"))
+(expect "Poll CAB-2 was rejected" "Reject" (dab.poller.read-poll-results "CAB-2"))
+(expect "Poll CAB-3 was rejected by quorum" "Rejected by quorum" (dab.poller.read-poll-results "CAB-3"))
+(expect "Poll CAB-4 was rejected by votes quorum" "Rejected by quorum" (dab.poller.read-poll-results "CAB-4"))
+
 (commit-tx)

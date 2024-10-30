@@ -3,7 +3,7 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { useAppSelector } from "@/app/hooks";
 import { selectLockupSummaryPie, selectDisplayAmount } from "./bondSlice";
 import { LockupOptionDistribution } from "./types";
-
+import styles from "@/styles/main.module.css";
 const COLORS: string[] = ["#4A9079", "#E41968", "#FF8042", "#EDC4AB", "#E6E8EA" ];
 
 const OptionNamePieChart: React.FC = () => {
@@ -25,16 +25,9 @@ const OptionNamePieChart: React.FC = () => {
     if (active && payload && payload.length) {
       const percentage = ((payload[0].value / total) * 100).toFixed(2);
       return (
-        <div
-          className="custom-tooltip"
-          style={{
-            backgroundColor: "white",
-            padding: "5px",
-            borderRadius: "5px",
-          }}
-        >
-          <p className="label" style={{ color: "black" }}>
-            {`${payload[0].name} : ${percentage}%`}
+        <div className={styles.analyticsTooltip}>
+          <p>
+        {`${payload[0].name} : ${percentage}%`}
           </p>
         </div>
       );

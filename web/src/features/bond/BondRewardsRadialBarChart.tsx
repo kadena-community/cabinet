@@ -1,4 +1,5 @@
 import React from "react";
+import styles from "@/styles/main.module.css";
 import {
   BarChart,
   Bar,
@@ -23,6 +24,21 @@ const BondRewardsHorizontalBarChart: React.FC<{ bond: any }> = ({ bond }) => {
     { name: "Available", value: availableRewards },
   ];
 
+  const CustomTooltip: React.FC<CustomTooltipProps> = ({
+  active,
+  payload,
+  label,
+}) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className={styles.analyticsTooltip}>
+        <p>{`${label} : ${payload[0].value.toLocaleString()} KDA`}</p>
+      </div>
+    );
+  }
+  return null;
+}
+
   return (
     <div>
       <h2 className="text-lg font-semibold mb-2 whitespace-nowrap">
@@ -37,7 +53,7 @@ const BondRewardsHorizontalBarChart: React.FC<{ bond: any }> = ({ bond }) => {
           <XAxis type="number" axisLine={{ stroke: "var(--color-axis)" }}   tick={{ fill: "var(--color-axis)" }} />
           <YAxis type="category" dataKey="name"    tick={{ fill: "var(--color-axis)" }}
                  axisLine={{ stroke: "var(--color-axis)"}}/>
-          <Tooltip formatter={(value: any) => value.toFixed(2) + " KDA"} />
+          <Tooltip content={<CustomTooltip />} />
           <Bar dataKey="value">
             {data.map((entry, index) => (
               <Cell

@@ -24,35 +24,14 @@ public class Poll
     [JsonPropertyName("bond-id")]
     public string BondId { get; set; }  = "";
 
-    [JsonPropertyName("votes-yes")]
-    public JsonElement _votesYes { get; set; }
-
-    [JsonPropertyName("votes-no")]
-    public JsonElement _votesNo { get; set; }
-
-    [JsonPropertyName("votes-abstentions")]
-    public JsonElement _votesAbstentions { get; set; }
+    [JsonPropertyName("options")]
+    public List<PollOption> PollOptions {get;  set;} = new();
 
     [JsonPropertyName("election-end")]
     public PactDateTimeP ElectionEnd { get; set; } = new();
 
     [JsonPropertyName("election-start")]
     public PactDateTimeP ElectionStart { get; set; } = new();
-
-    public decimal VotesYes
-    {
-        get { return Utils.GetDecimal(_votesYes); }
-    }
-
-    public decimal VotesNo
-    {
-        get { return Utils.GetDecimal(_votesNo); }
-    }
-
-    public decimal VotesAbstentions
-    {
-        get { return Utils.GetDecimal(_votesAbstentions); }
-    }
 
     [JsonPropertyName("number-votes")]
     public JsonElement _numberVotes { get; set; }
@@ -66,15 +45,28 @@ public class Poll
     public JsonElement _quorum { get; set; }
     public decimal Quorum { get  { return Utils.GetDecimal(_quorum); }}
 
-
 }
+
+public class PollOption
+{
+
+    [JsonPropertyName("option-name")]
+    public string _optionName { get; set; } = "";
+    public string OptionName { get { return _optionName; }}
+    [JsonPropertyName("option-index")]
+    public JsonElement index {get; set;}
+    public decimal OptionIndex { get { return Utils.GetInteger(index); }}
+    [JsonPropertyName("votes-polling-power")]
+    public JsonElement _votesPollingPower {get; set;}
+    public decimal VotesPollingPower { get { return Utils.GetDecimal(_votesPollingPower); }}
+}
+
 
 public enum PollStatus
 {
     Open = 0,
-    Approved = 1,
-    Refused = 2,
-    Review = 3
+    Closed = 1,
+    Review = 2
 }
 
 public class PollDTO
@@ -85,9 +77,7 @@ public class PollDTO
     public string PollId { get; set; } = "";
     public DateTime CreationTime { get; set; }
     public string BondId { get; set; } = "";
-    public decimal VotesYes { get; set; }
-    public decimal VotesNo { get; set; }
-    public decimal VotesAbstentions { get; set; }
+    public List<PollOption> PollOptions { get; set; } = new();
     public DateTime ElectionStart { get; set; }
     public DateTime ElectionEnd { get; set; }
     public decimal Quorum {get; set;}
@@ -106,7 +96,7 @@ public class PollDTO
                 return PollStatus.Open;
             }
 
-            return VotesYes > VotesNo ? PollStatus.Approved : PollStatus.Refused;
+            return PollStatus.Closed;
         }
     }
 }
@@ -137,13 +127,6 @@ public class PollVote
     {
         get { return Utils.GetDecimal(_pollingPower); }
     }
-}
-
-public enum PollOptions
-{
-    Approve,
-    Reject,
-    Abstain
 }
 
 public class PollVoteDTO

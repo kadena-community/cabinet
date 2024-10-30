@@ -166,31 +166,34 @@ public class AnalyticsService : IAnalyticsService
 
     }
 
+
     public async Task<string> GetMostVotedPoll(bool ignoreCache = false)
     {
         try
         {
             var allPolls = await _pollService.GetAllPolls(ignoreCache);
 
-            var maxVotes = allPolls.OrderByDescending(p => p.VotesNo + p.VotesYes + p.VotesAbstentions).FirstOrDefault();
+            // Get the poll with the maximum total votes
+            var maxVotesPoll = allPolls.OrderByDescending(p => p.PollOptions.Sum(o => o.VotesPollingPower)).FirstOrDefault();
 
-            if (maxVotes == null)
+            if (maxVotesPoll == null)
             {
                 return "No polls available";
             }
 
-            string formattedPollId = maxVotes.PollId.Length > 6
-                ? $"{maxVotes.PollId.Substring(0, 3)}...{maxVotes.PollId.Substring(maxVotes.PollId.Length - 3)}"
-                : maxVotes.PollId;
+            string formattedPollId = maxVotesPoll.PollId.Length > 6
+                ? $"{maxVotesPoll.PollId.Substring(0, 3)}...{maxVotesPoll.PollId.Substring(maxVotesPoll.PollId.Length - 3)}"
+                : maxVotesPoll.PollId;
 
-            var totalVotes = maxVotes.VotesNo + maxVotes.VotesYes + maxVotes.VotesAbstentions;
+            var totalVotes = maxVotesPoll.PollOptions.Sum(o => o.VotesPollingPower);
             return $"{formattedPollId} ({totalVotes:N0} VP)";
         }
-        catch (Exception e)
+        catch (Exception)
         {
             return "No polls available";
         }
     }
+
 
     public async Task<string> GetAverageLockup(bool ignoreCache = false)
     {
@@ -498,16 +501,10 @@ public class AnalyticsService : IAnalyticsService
             var allVotes = await _pollService.GetPollVotes(pollId, ignoreCache);
 
             var voteDistribution = allVotes
-                .GroupBy(vote => vote.Action.ToLower())
+                .GroupBy(vote => vote.Action)
                 .Select(group => new VoteDistributionDTO
                 {
-                    Type = group.Key switch
-                    {
-                        "approved" => "Yes",
-                        "refused" => "No",
-                        "abstention" => "Abstention",
-                        _ => "Unknown"
-                    },
+                    Type = group.Key,
                     VoteCount = group.Count(),
                     PollingPower = group.Sum(vote => vote.PollingPower)
                 })
@@ -585,7 +582,7 @@ public class AnalyticsService : IAnalyticsService
                 .GroupBy(lockup => lockup.LockupLength)
                 .Select(group => new LockupDistributionDTO
                 {
-                    OptionName = Utils.GetOptionName(bond,  group.Key),
+                    OptionName = Utils.GetOptionName(bond, group.Key),
                     OptionLength = group.First().LockupLength,
                     LockupCount = group.Count(),
                     Amount = group.Sum(lockup => lockup.Amount)

@@ -1,7 +1,7 @@
 // app/components/BondLockupDistributionBarChart.tsx
 
 "use client";
-
+import styles from "@/styles/main.module.css"
 import React from "react";
 import {
   BarChart,
@@ -28,6 +28,25 @@ const BondLockupDistributionBarChart: React.FC<BondLockupDistributionBarChartPro
 }) => {
   const { lockedCount, claimedCount } = bond;
 
+
+  const CustomTooltip: React.FC<CustomTooltipProps> = ({
+  active,
+  payload,
+  label,
+}) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className={styles.analyticsTooltip}>
+        <p>{payload.name}</p>
+        <p>Locked: {(payload[0].value /(payload[0].value + payload[1].value) * 100).toFixed(2)}%</p>
+        <p>Claimed: {(payload[1].value / (payload[0].value + payload[1].value) * 100).toFixed(2)}%</p>
+      </div>
+    );
+  }
+  return null;
+};
+
+
   const totalLockups = lockedCount + claimedCount;
 
   const data = [
@@ -53,7 +72,7 @@ const BondLockupDistributionBarChart: React.FC<BondLockupDistributionBarChartPro
         >
           <XAxis type="number" domain={[0, totalLockups]} hide />
           <YAxis type="category" dataKey="name" hide />
-          <Tooltip formatter={(value: any) => `${((value / totalLockups) * 100).toFixed(2)}%`} />
+          <Tooltip  content={<CustomTooltip />} />
           <Bar
             dataKey="locked"
             stackId="a"

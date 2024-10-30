@@ -1,73 +1,101 @@
+import styles from "@/styles/main.module.css";
 import React from "react";
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from "recharts";
 import { useAppSelector } from "@/app/hooks";
 import { selectNumberOfVotes, selectDisplayPollingPower } from "./votesSlice";
 import { AppLoader } from "@/features/components/Loader";
+
 interface VoteData {
   name: string;
   value: number;
 }
 
-const COLORS: { [key: string]: string } = {
-  Yes: "#4A9079", // Green
-  No: "#E41968", // Pink
-  Abstention: "#FF8042", // Orange
+const COLORS = [
+  "#4A9079", // k-Green-default
+  "#E41968", // k-Pink-default
+  "#E27B38", // k-Orange-default
+  "#F0EAE6", // k-Cream-default
+  "#ACB4BA", // dark-blue-200
+  "#EDC4AB", // k-Ltorange-default
+  "#C4E9DD", // k-Green-200
+  "#FFA3C3", // lighter-pink
+  "#436270", // medium-blue
+  "#071D2F", // dark-blue-default
+];
+
+// Custom tooltip component
+const CustomTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    const { name, value } = payload[0];
+    return (
+      <div className={styles.analyticsTooltip}>
+        <p style={{ margin: 0 }}>
+          {payload[0].payload.name}: {value.toLocaleString()}
+        </p>
+      </div>
+    );
+  }
+  return null;
 };
 
-const VoteDistributionPieChart: React.FC = () => {
+const VoteDistributionBarChart: React.FC = () => {
   const numberOfVotes = useAppSelector(selectNumberOfVotes);
   const displayPollingPower = useAppSelector(selectDisplayPollingPower);
 
   if (!numberOfVotes) {
-    return (
-      <div>
-        <AppLoader true size="16px" stroke="#E27B38" />
-      </div>
-    );
+    return <p>No votes available</p>;
   }
 
-  // Ensure all categories are represented
-  const dataMap: { [key: string]: VoteData } = {
-    Yes: { name: "Yes", value: 0 },
-    No: { name: "No", value: 0 },
-    Abstention: { name: "Abstention", value: 0 },
-  };
+  // Transform the data dynamically based on available vote types
+  const data: VoteData[] = numberOfVotes.map((vote) => ({
+    name: vote.type,
+    value: displayPollingPower ? vote.pollingPower : vote.voteCount,
+  }));
 
-  numberOfVotes.forEach((vote) => {
-    const type = vote.type;
-    const value = displayPollingPower ? vote.pollingPower : vote.voteCount;
-    if (dataMap[type]) {
-      dataMap[type].value = value;
-    }
+  // Sort the data from highest to lowest values
+  const sortedData = [...data].sort((a, b) => b.value - a.value);
+
+  // Get the list of vote types, sorted alphabetically
+  const voteTypes = sortedData.map((d) => d.name).sort();
+
+  // Create a mapping from vote types to colors
+  const colorMap: { [voteType: string]: string } = {};
+  voteTypes.forEach((voteType, index) => {
+    colorMap[voteType] = COLORS[index % COLORS.length];
   });
-
-  const data: VoteData[] = Object.values(dataMap);
 
   return (
     <div>
       <h2 className="text-lg font-semibold mb-2 whitespace-nowrap">
         {displayPollingPower ? "Total Voting Power" : "Total Votes"}
       </h2>
-      <ResponsiveContainer width="100%" height={207}>
-        <PieChart>
-          <Pie
-            data={data}
-            dataKey="value"
-            nameKey="name"
-            cx="50%"
-            cy="50%"
-            outerRadius={100}
-            fill="#8884d8"
-          >
-            {data.map((entry) => (
-              <Cell key={`cell-${entry.name}`} fill={COLORS[entry.name]} />
+      <ResponsiveContainer width="100%" height={500}>
+        <BarChart
+          data={sortedData}
+          layout="vertical"
+          margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+        >
+          <XAxis type="number" />
+          <YAxis type="category" dataKey="name" width={150} />
+          <Tooltip content={<CustomTooltip />} />
+          {/* Render bars dynamically based on sorted data */}
+          <Bar dataKey="value" fill="#8884d8">
+            {sortedData.map((entry) => (
+              <Cell key={`cell-${entry.name}`} fill={colorMap[entry.name]} />
             ))}
-          </Pie>
-          <Tooltip />
-        </PieChart>
+          </Bar>
+        </BarChart>
       </ResponsiveContainer>
     </div>
   );
 };
 
-export default VoteDistributionPieChart;
+export default VoteDistributionBarChart;

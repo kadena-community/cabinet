@@ -12,7 +12,7 @@ import { IGas } from "@/utils/kadenaHelper";
 
 export default async function voteOnPoll(
   pollId: string,
-  action: "approved" | "refused" | "abstain",
+  vote: number,
   account: string,
   gasStationEnabled: boolean,
   gasConfig: IGas,
@@ -25,9 +25,10 @@ export default async function voteOnPoll(
         guard: data.guard,
         account: data.account,
         pollid: pollId,
+        vote: vote
       };
 
-      const pactCode = `(${POLLER_CONTRACT}.vote-${action} (read-msg 'account) (read-msg 'pollid) )`;
+      const pactCode = `(${POLLER_CONTRACT}.vote (read-msg 'account) (read-msg 'pollid) (read-integer 'vote))`;
 
       const caps = [
         gasStationEnabled

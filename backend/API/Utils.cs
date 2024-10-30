@@ -2,6 +2,8 @@
 using PactSharp.Types;
 using Dab.API.Models;
 using Dab.API.Models.Bonder;
+using Dab.API.Models.Poller;
+
 namespace Dab.API
 {
     public static class Utils
@@ -40,6 +42,35 @@ namespace Dab.API
 
             var options = bond.LockupOptions;
             return options.Where(e => e.OptionLength == optionLenght).First().OptionName;
+
+        }
+
+        public static bool? GetElectionResultForVote(PollVote vote, List<PollDTO> polls)
+        {
+            var poll = polls.Where(e => e.PollId == vote.PollId).First();
+
+           if(poll.Status != PollStatus.Closed){
+
+               return null;
+
+           }
+           else{
+
+              var mostVotedOption = poll.PollOptions.OrderByDescending(e => e.VotesPollingPower).FirstOrDefault();
+
+              if(mostVotedOption?.OptionName == vote.Action) {
+
+                  return true;
+              }
+              else
+              {
+                  return false;
+
+              }
+
+
+           }
+
 
         }
 
