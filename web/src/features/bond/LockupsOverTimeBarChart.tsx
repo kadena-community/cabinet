@@ -6,7 +6,7 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  
+  TooltipProps,
 } from "recharts";
 import { useAppSelector } from "@/app/hooks";
 import { selectLockupSummaryBar, selectDisplayAmount } from "./bondSlice";
@@ -18,6 +18,13 @@ const COLORS = {
   amount: "#4A9079",
   lockupCount: "#E41968",
 };
+
+
+interface CustomTooltipProps extends TooltipProps<number, string> {
+  active?: boolean;
+  payload?: any;
+  label?: string;
+}
 
 const CustomTooltip: React.FC<CustomTooltipProps> = ({
   active,

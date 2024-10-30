@@ -9,6 +9,7 @@ import {
   XAxis,
   YAxis,
   Tooltip,
+  TooltipProps,
   ResponsiveContainer,
   Cell,
 } from "recharts";
@@ -21,6 +22,12 @@ const COLORS = {
 
 interface BondLockupDistributionBarChartProps {
   bond: Bond;
+}
+
+interface CustomTooltipProps extends TooltipProps<number, string> {
+  active?: boolean;
+  payload?: any;
+  label?: string;
 }
 
 const BondLockupDistributionBarChart: React.FC<BondLockupDistributionBarChartProps> = ({

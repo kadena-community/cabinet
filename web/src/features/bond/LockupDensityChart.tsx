@@ -6,6 +6,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  TooltipProps,
   ResponsiveContainer,
   Legend,
 } from "recharts";
@@ -30,11 +31,17 @@ const LockupDensityChart: React.FC = () => {
     return <div>Loading...</div>;
   }
 
+  interface CustomTooltipProps extends TooltipProps<number, string> {
+  active?: boolean;
+  payload?: any;
+  label?: string;
+  }
+
   const CustomTooltip: React.FC<CustomTooltipProps> = ({
-  active,
-  payload,
-  label,
-}) => {
+    active,
+    payload,
+    label,
+  }) => {
   if (active && payload && payload.length) {
     return (
       <div className={styles.analyticsTooltip}>
