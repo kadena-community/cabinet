@@ -2,7 +2,7 @@
 
 Welcome to the Kadena Cabinet Smart Contract Documentation. This guide aims to provide a comprehensive understanding of the inner workings of our platform.
 Whether you're a developer looking to delve into the specifics of our smart contracts or a user wanting to understand how our system operates,
-this documentation will be your essential resource.
+this documentation will be your essential resource. Don't hesitate in contacting us in case of any doubt.
 
 
 * Bonder Contract Documentation
@@ -49,10 +49,10 @@ when interacting with nodes having the `AllowReadsOnLocal` option activated.
 
 When a bond is created, there are lockup tiers that are determined by the creator. Each tier has the following properties:
 
-- =option-length=: Amount of time that the users kda will be locked. E.g (days 3)
-- =time-multiplier=: APR boost for locking in this tier. E.g 1.1
-- =poller-max-boost=: Maximum APR boost for poll participation. E.g 1.05
-- =polling-power-multiplier= : Factors into the polling power computation. E.g 2.0
+=option-length=: Amount of time that the users kda will be locked. E.g (days 3)
+=time-multiplier=: APR boost for locking in this tier. E.g 1.1
+=poller-max-boost=: Maximum APR boost for poll participation. E.g 1.05
+=polling-power-multiplier= : Factors into the polling power computation. E.g 2.0
 
 Additionally, the bond has the =base-apr= (e.g 1.05) global parameter and for each user on that bond we record the participation-rate parameter.  When a user locks an amount =x= of KDA on a tier, the amount they get back after =option-length= time is:
 
@@ -65,13 +65,13 @@ The total rewards earned by the user can be computed as
 
 And the earnings rate is given by
 
-=(claim / x) -1=
+=(claim/x) -1=
 
 TL;DR: The user gets maximum APR when they lock in the tier having the biggest =time-multiplier * poller-max-boost= (would normally be the longest one) and participates in all the polls. So in each bond the APR cap would be
 
-=base-apr * MAX_time-multiplier * poller-max-boost=
+=base-apr*MAX_time-multiplier*poller-max-boost=
 
-The polling power (used for voting on polls) is computed as =x * polling-power-multiplier=
+The polling power (used for voting on polls) is computed as =x*polling-power-multiplier=
 
 *** Examples
 
@@ -294,153 +294,157 @@ These security and validation mechanisms work together to safeguard the contract
 
 ** Overview
 
-The Poller contract is designed to manage governance through polls. It allows core agents to create polls, bonders to vote on these polls, and tracks interactions to influence rewards.
+The Poller contract is designed to manage governance through polls. It allows core agents to create polls, bonders to vote on these polls. The contract also stores information regarding election such as quorum and duration.
+It is capable of determining the outcome of the election and communicating interactions to the bonder contract.
 
 ** Key Functionalities
 
 - *Poll Creation*: Authorized core agents can create polls using the `create-poll` function, allowing governance proposals to be voted on by bonders.
-- *Governance*: Bonders can vote on polls with options to approve, reject, or abstain. The votes are tallied, and the consensus is recorded.
-- *Interactions*: Bonder interactions, such as voting in polls, affect their earnings from locking activities.
+
+- *Governance*: Bonders can vote on polls with options determined upon creation. The votes are tallied, and the consensus is recorded.
 
 ** Operational Mechanics
 
 - *Contract Communications*: The contract interacts with the Bonder contract to manage polling power based on bonders' locked positions and their interactions. It is also responsible for
   recording user interactions in the bonder contract, which are later user in reward computation.
-- *Main Entrypoints*: Core functionalities include =create-poll= for creating polls and =vote-approved=, =vote-refused=, and =vote-abstain= for voting on polls.lockups. The bonder-utils contract contains functions that don't work well with formal verification. We intend to use such functions only for read-type local calls and as of now the bonder-utils contract will only work
-when interacting with nodes having the `AllowReadsOnLocal` option activated.
+
+- *Main Entrypoints*: Core functionalities include =create-poll= for creating polls and =vote= for voting on polls.lockups.
 
 ** Schemas and Tables
 
-- *poll*: Tracks proposals created by core members.
-- *poll-vote*: Records votes in polls from bonder accounts.
-- *polling-parameters*: Tracks the duration of each election phase.
-- *contract-lock-status*: Tracks the lock status of the contract.
+   - =contract-lock-status=: Tracks the lock status of the contract.
+   - =poll=: Tracks the lockup options and their corresponding properties.
+   - =poll-vote=: Records bond sales created by the contract operator.
+   - =poll-option=: Tracks KDA bonding positions of the Bonder contract's users.
+   - =polling-parameters=: Tracks accounts allowed to create a bond.
+   - =poll-counter=: Schema for storing table keys and optimizing gas consumption.
+
+** Contract Capabilities
+
+   - =GOVERNANCE=: Ensures only authorized administrators can perform governance-related operations in the contract.
+   - =OPS=: Grants operational authority to manage the contract's operational functions, such as toggling the contract lock status.
+   - =INTERNAL=: Manages internal methods of the contract, allowing the execution of specific internal functions.
+   - =ACCOUNT_GUARD=: Ensures that only authorized users can interact with the contract for a given account.
+   - =BONDER=: Manages privileges for bonder accounts, enforcing conditions that allow an account to bond in the contract.
+   - =PERIOD=: Ensures that operations are performed within a specific start and end time, typically used for elections or polls.
+   - =CREATE_POLL=: Grants the ability to create new polls in the contract, restricted to CAB core agents.
+   - =VOTE=: Allows bonded users to cast votes in active polls, provided they meet the eligibility criteria.
+   - =BONDER_NOTIFY=: Manages interactions with the bonder contract, allowing updates to bond and interaction records.
+
 
 ** Key Functions Detailed Overview
 
-- **GOVERNANCE**: Ensures only authorized administrators can perform certain operations.
-- **OPS**: Allows contract operators to execute operational functions.
-- **INTERNAL**: Reserved for internal contract mechanisms.
-- **ACCOUNT_GUARD**: Manages the account-specific interactions.
-- **BONDER**: Manages privileges for bonder accounts.
-- **CORE_MEMBER**: Manages privileges for core accounts.
-- **PERIOD**: Ensures operations occur within specified time periods.
-- **CREATE_POLL**: Allows creating new polls.
-- **VOTE**: Grants permission to vote in polls.
-- **BONDER_NOTIFY**: Manages interaction with the Bonder contract.
+*** enforce-contract-unlocked
+Asserts that the contract is not in a paused state.
+   - Parameters: None.
 
-*** Schemas and Tables
-
-- *poll*: Tracks proposals created by core members.
-- *poll-vote*: Records votes in polls from bonder accounts.
-- *polling-parameters*: Tracks the duration of each election phase and also quorum percentage.
-- *contract-lock-status*: Tracks the lock status of the contract.
-
-** Key Functions Detailed Overview
+*** set-contract-lock
+Toggles the lock status of the contract.
+   - Parameters:
+     - =lock=: Boolean value indicating whether the contract should be locked or unlocked.
 
 *** create-poll
-Creates a new poll, specifying the terms and details. Only core members can perform this action.
+Allows a CAB core agent to create a poll.
    - Parameters:
      - =account=: The account creating the poll.
      - =title=: The title of the poll.
-     - =description=: A detailed description of the poll.
+     - =bond-id=: The bond ID associated with the poll.
+     - =description=: The description of the poll.
+     - =option-names=: A list of option names for the poll.
 
-*** vote-approved
-Allows bonders to vote to approve a poll.
+*** vote
+Allows a bonder to vote in a poll by selecting an option via index.
    - Parameters:
-     - =account=: The account voting.
-     - =poll-id=: The ID of the poll being voted on.
+     - =account=: The account of the voter.
+     - =poll-id=: The ID of the poll to vote on.
+     - =option-index=: The index of the option being voted on.
 
-*** vote-refused
-Allows bonders to vote to refuse a poll.
+*** register-new-poll
+Internally manages the increment of total polls in a bond.
    - Parameters:
-     - =account=: The account voting.
-     - =poll-id=: The ID of the poll being voted on.
+     - =bond-id=: The ID of the bond associated with the new poll.
 
-*** vote-abstain
-Allows bonders to abstain from voting on a poll.
+*** register-poll-interaction
+Internally tracks interactions from a bonder in a poll.
    - Parameters:
-     - =account=: The account abstaining.
-     - =poll-id=: The ID of the poll being voted on.
-
-*** is-poll-approved
-Checks if a poll has been approved.
-   - Parameters:
-     - =poll-id=: The ID of the poll.
-
-*** read-account-created-polls
-Fetches all polls created by a specified account.
-   - Parameters:
-     - =account=: The account whose polls are being fetched.
-
-*** read-active-polls
-Retrieves all active polls.
-   - Parameters: None.
-
-*** read-all-polls
-Retrieves details of all polls created in the contract.
-   - Parameters: None.
-
-*** read-poll-votes
-Retrieves all votes in a specified poll.
-   - Parameters:
-     - =poll-id=: The ID of the poll.
-
-*** read-all-account-votes
-Fetches all votes from a specified account.
-   - Parameters:
-     - =account=: The account whose votes are being fetched.
-
-*** read-poll-vote
-Fetches a specific vote in a poll.
-   - Parameters:
-     - =account=: The account that voted.
-     - =poll-id=: The ID of the poll.
+     - =account=: The bonder's account.
+     - =poll-id=: The ID of the poll in which the interaction occurred.
 
 *** read-poll
-Fetches details of a specified poll.
+Reads and retrieves details of a poll from the polls table.
    - Parameters:
      - =poll-id=: The ID of the poll.
+
+*** read-poll-options
+Retrieves all the available options for a poll.
+   - Parameters:
+     - =poll-id=: The ID of the poll.
+
+*** read-poll-vote
+Fetches a specific vote for an account in a poll.
+   - Parameters:
+     - =account=: The voter's account.
+     - =poll-id=: The ID of the poll.
+
+*** read-all-polls
+Retrieves all polls from the polls table.
+   - Parameters: None.
+
+*** can-account-vote
+Checks if an account can vote in a specific poll.
+   - Parameters:
+     - =account=: The account in question.
+     - =poll-id=: The ID of the poll.
+
+*** validate-option-name
+Ensures that the poll option name follows required constraints (e.g., length, charset).
+   - Parameters:
+     - =option-name=: The name of the poll option.
+
+*** compose-poll-options
+Creates a list of poll options from a list of names.
+   - Parameters:
+     - =option-names=: A list of option names.
 
 *** edit-polling-parameters
-Allows operators to edit the durations of voting periods.
+Allows operators to modify the durations and quorum settings for election phases.
    - Parameters:
-     - =params=: The new voting periods.
+     - =params=: Object containing the new polling parameters.
 
-*** get-polling-power
-Retrieves the polling power of a bonder.
-   - Parameters:
-     - =account=: The account whose polling power is being fetched.
-     - =poll-id=: The ID of the poll.
-*** compute-poll-quorum
-Computes the quorum for a poll based on active bonds.
-   - Parameters:
-     - =active-bonds=: List of active bond IDs.
+*** election-period
+Returns the duration (in seconds) of the election period.
+   - Parameters: None.
 
-*** compute-poll-votes-quorum
-Computes the votes quorum for a poll based on active bonds.
-   - Parameters:
-     - =active-bonds=: List of active bond IDs.
+*** quorum-percentage
+Returns the percentage of total votes required for approval.
+   - Parameters: None.
+
+*** review-period
+Returns the duration (in seconds) of the review period before an election.
+   - Parameters: None.
 
 ** Security and Validation
 
+The poller contract incorporates plenty security measures and validation checks to ensure the integrity and proper functioning of its features. These mechanisms are crucial for preventing unauthorized actions, ensuring data consistency, and maintaining the contract's overall security posture.
 
-The Poller contract incorporates several security measures and validation checks to ensure the integrity and proper functioning of its features. These mechanisms are crucial for preventing unauthorized actions, ensuring data consistency, and maintaining the contract's overall security posture.
+*** Capabilities, Guards, and Privileges
 
-** Capabilities, Guards, and Privileges
 
-- **Guarded Capabilities**: The contract defines specific capabilities (GOVERNANCE, OPS, INTERNAL, ACCOUNT_GUARD, BONDER, CORE_MEMBER, PERIOD, CREATE_POLL, VOTE, BONDER_NOTIFY) that restrict access to critical functions.
-- **Dynamic Capability Acquisition**: Functions like `create-poll` and `vote` require dynamic acquisition of capabilities to execute, ensuring that actions are only performed by users who meet the necessary criteria.
+- *Dynamic Capability Acquisition*: Functions like create-poll and vote require the dynamic acquisition of capabilities (CREATE_POLL, VOTE) to execute, ensuring that actions are only performed by users who meet the necessary criteria at the time of execution.
 
-** Validation Checks
+- *Privileges*: The BONDER_NOTIFY capability manages the integration with the bonder contract
 
-- *Poll Validations*: Functions like `create-poll` and `vote` ensure that poll parameters adhere to predefined rules, such as valid time frames and character limits.
-- *Time Constraints*: Functions enforce time-related constraints to ensure actions occur within designated windows.
-- *Account and Bonding Checks*: Operations validate accounts and their associated bonds to enhance governance and incentive structures.
+*** Validation Checks
 
-** Security Events and Guard Checks
+- *Poll and Options Validations*: The CREATE_POLL capa =validate-poll-option= functions ensure that poll title, description, and options follow some predefined rules.
 
-- *Security Events (@event)*: Key actions within the contract are marked with the @event keyword, facilitating tracking and auditing.
-- *Enforce Guards*: The contract employs different enforcements to validate the identity and permissions of users attempting to execute sensitive functions.
+- *Time Constraints*: There are functions and capabilities that enforce time-related constraints. For example, we use =(enforce-guard (after-date start-time))=, to ensure actions occur within the designated time windows, preventing votes outside the predefined periods, which could disrupt election results and reward distributions.
 
-These security and validation mechanisms work together to safeguard the contract against unauthorized access, ensure data consistency and accuracy, and maintain a secure environment for managing Kadena token transactions and governance activities.
+- *Parameter Verification*: The =edit-polling-parameters= function performs checks to ensure that the parameters are valid.
+
+*** Security Events and Guard Checks
+
+- *Security Events (@event)*: Key actions within the contract are marked with the @event keyword, facilitating the tracking and auditing of significant operations, such as poll creation and votes, maintaining the principles of transparency and traceability.
+
+- *Enforce Guards*: The contract employs =enforce-guard= statements to validate the identity and permissions of users attempting to execute sensitive functions, ensuring that only authorized individuals can perform those actions.
+

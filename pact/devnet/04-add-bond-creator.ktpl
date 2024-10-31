@@ -4,8 +4,6 @@ signers:
     caps:
       - name: coin.GAS
         args: []
-      - name: coin.TRANSFER
-        args: ["{{{admin-account}}}", "bonder-bank", 2000.0]
   - public: {{{admin-pk}}}
 data:
   ns: "{{{ns}}}"

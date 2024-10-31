@@ -4,14 +4,8 @@ signers:
     caps:
       - name: coin.GAS
         args: []
-      - name: dab.poller.CORE_MEMBER
+      - name: dab.poller.ACCOUNT_GUARD
         args: ["{{{admin-account}}}"]
-data:
-  ns: "{{{ns}}}"
-  ns-admin-keyset:
-    keys:
-    - {{{admin-pk}}}
-    pred: keys-all
 publicMeta:
   chainId: "{{{chain}}}"
   gasLimit: 100000
@@ -19,4 +13,4 @@ publicMeta:
   sender: {{{admin-account}}}
   gasPrice: 0.000001
 code: |+
-  (dab.poller.create-poll "{{{admin-account}}}" "KIP-0032: Implementation of Gas Fee Estimation Mechanism" "This proposal advocates for implementing a gas fee estimation mechanism to provide accurate transaction fee estimates based on network congestion, ensuring users have a seamless experience.")
+  (dab.poller.create-poll "{{{admin-account}}}" "KIP-0039: Implementation of Gas Fee Estimation Mechanism" "LOCKUP_SALE-1" "This proposal advocates for implementing a gas fee estimation mechanism to provide accurate transaction fee estimates based on network congestion, ensuring users have a seamless experience." ["Yes" "No"])

@@ -17,7 +17,7 @@ type InfoMap = {
 };
 
 export enum InfoTopics {
-  POLLING_POWER = "Polling Power",
+  POLLING_POWER = "Voting Power",
   GENERAL_REWARDS = "Rewards",
   POLLS = "Polls",
 }
@@ -146,19 +146,19 @@ const Info: React.FC<InfoProps> = ({ topic }) => {
   };
 
   return (
-        <>
-            <div  onClick={(e) => handleOpenModal(e)}>
-                <InfoIcon />
-            </div>
-            {isModalOpen && (
-                <InfoModal
-                    topic={topic}
-                    isOpen={isModalOpen}
-                    onClose={handleCloseModal}
-                />
-            )}
-        </>
-    );
+    <>
+      <div onClick={(e) => handleOpenModal(e)}>
+        <InfoIcon />
+      </div>
+      {isModalOpen && (
+        <InfoModal
+          topic={topic}
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+        />
+      )}
+    </>
+  );
 };
 
 export default Info;

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Dab.API.Models.Poller;
 using Dab.API.Models;
 
+
 namespace Dab.API.Controllers;
 
 /// <summary>
@@ -76,6 +77,7 @@ public class PollController : ControllerBase
                 .Take(pageSize)
                 .ToList();
 
+
             var nPages = (int)Math.Ceiling(totalItems / (double)pageSize);
 
             var ret = new PagedResult<PollDTO>
@@ -85,6 +87,7 @@ public class PollController : ControllerBase
                 Results = paginatedResults,
                 TotalItems = totalItems,
             };
+
 
             return Ok(ret);
         }
@@ -133,7 +136,7 @@ public class PollController : ControllerBase
         try
         {
             var result = await _pollService.GetPoll(pollId, ignoreCache);
-            var votesDTO = _mapper.Map<PollDTO>(result);
+            var votesDTO = _mapper.Map<PollDTO>(result); //result.PollOptions.Select(e => new PollOptionDTO(e));
             var ret = new ServiceResult { HasErrors = false, JsonString = Utils.JsonPrettify(votesDTO) };
             return Ok(ret);
         }
@@ -304,7 +307,7 @@ public class PollController : ControllerBase
     int pageSize = 10,
     string? search = null,
     bool sortByPollingPower = false,
-    PollOptions? actionFilter = null,
+    string? actionFilter = null,
     bool ignoreCache = false)
     {
         try
@@ -321,18 +324,11 @@ public class PollController : ControllerBase
             }
 
             // Apply action filter if provided
-            if (actionFilter.HasValue)
+            if (!string.IsNullOrEmpty(actionFilter))
             {
-                var actionString = actionFilter.Value switch
-                {
-                    PollOptions.Approve => "approved",
-                    PollOptions.Reject => "refused",
-                    PollOptions.Abstain => "abstention",
-                    _ => throw new ArgumentOutOfRangeException()
-                };
 
                 votesDTO = votesDTO
-                    .Where(v => v.Action.Equals(actionString, StringComparison.OrdinalIgnoreCase))
+                    .Where(v => v.Action.Equals(actionFilter, StringComparison.OrdinalIgnoreCase))
                     .ToList();
             }
 

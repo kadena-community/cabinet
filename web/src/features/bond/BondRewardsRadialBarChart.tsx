@@ -1,4 +1,5 @@
 import React from "react";
+import styles from "@/styles/main.module.css";
 import {
   BarChart,
   Bar,
@@ -6,12 +7,19 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  TooltipProps,
   ResponsiveContainer,
   Legend,
   Cell,
 } from "recharts";
 
 const COLORS = ["#4A9079", "#E41968", "#FF8042"];
+
+interface CustomTooltipProps extends TooltipProps<number, string> {
+  active?: boolean;
+  payload?: any;
+  label?: string;
+}
 
 const BondRewardsHorizontalBarChart: React.FC<{ bond: any }> = ({ bond }) => {
   const { totalRewards, lockedRewards, givenRewards } = bond;
@@ -22,6 +30,21 @@ const BondRewardsHorizontalBarChart: React.FC<{ bond: any }> = ({ bond }) => {
     { name: "Given", value: givenRewards },
     { name: "Available", value: availableRewards },
   ];
+
+  const CustomTooltip: React.FC<CustomTooltipProps> = ({
+  active,
+  payload,
+  label,
+}) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className={styles.analyticsTooltip}>
+        <p>{`${label} : ${payload[0].value.toLocaleString()} KDA`}</p>
+      </div>
+    );
+  }
+  return null;
+}
 
   return (
     <div>
@@ -37,7 +60,7 @@ const BondRewardsHorizontalBarChart: React.FC<{ bond: any }> = ({ bond }) => {
           <XAxis type="number" axisLine={{ stroke: "var(--color-axis)" }}   tick={{ fill: "var(--color-axis)" }} />
           <YAxis type="category" dataKey="name"    tick={{ fill: "var(--color-axis)" }}
                  axisLine={{ stroke: "var(--color-axis)"}}/>
-          <Tooltip formatter={(value: any) => value.toFixed(2) + " KDA"} />
+          <Tooltip content={<CustomTooltip />} />
           <Bar dataKey="value">
             {data.map((entry, index) => (
               <Cell

@@ -5,7 +5,8 @@
 }
 
 .analyticsTooltip {
-  @apply bg-k-Blue-700 text-k-Cream-default p-2 rounded;
+  @apply bg-k-Blue-700 text-k-Cream-default items-stretch p-2 rounded z-[500];
+
 }
 
 .sidebarOpen {

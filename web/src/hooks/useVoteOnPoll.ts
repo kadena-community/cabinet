@@ -31,7 +31,7 @@ export function useVoteOnPoll() {
 
   async function handleVote(
     pollId: string,
-    type: "approved" | "refused" | "abstain",
+    vote: number,
   ) {
     if (!account?.account) {
       addPopup({
@@ -43,7 +43,7 @@ export function useVoteOnPoll() {
 
     const signCmd = await voteOnPoll(
       pollId,
-      type,
+      vote,
       account.account,
       isGasStationEnabled,
       userGasConfig,

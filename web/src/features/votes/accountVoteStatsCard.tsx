@@ -41,16 +41,16 @@ const VoteStatsCard: React.FC<VoteStatsCardProps> = ({ account }) => {
                         <p className="text-2xl">{stats.TotalVotes}</p>
                     </div>
                     <div className={`${styles.cardItem} mb-3`}>
-                        <h3 className="text-lg">Votes Yes</h3>
-                        <p className="text-2xl">{stats.VotesYes}</p>
+                        <h3 className="text-lg">Ongoing</h3>
+                        <p className="text-2xl">{stats.OngoingVotes}</p>
                     </div>
                     <div className={`${styles.cardItem} mb-3`}>
-                        <h3 className="text-lg">Votes No</h3>
-                        <p className="text-2xl">{stats.VotesNo}</p>
+                        <h3 className="text-lg">Votes Won</h3>
+                        <p className="text-2xl">{stats.VotesWon}</p>
                     </div>
                     <div className={`${styles.cardItem} mb-3`}>
-                        <h3 className="text-lg">Abstentions</h3>
-                        <p className="text-2xl">{stats.Abstentions}</p>
+                        <h3 className="text-lg">Votes Lost</h3>
+                        <p className="text-2xl">{stats.VotesLost}</p>
                     </div>
                 </div>
                 </div>

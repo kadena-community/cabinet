@@ -163,6 +163,29 @@ export const createSignCmd = (
   return signCmd;
 };
 
+//HACK: Why is this function not using the envData or caps arguments?
+export const createLocalCmd = (
+  pactCode: string,
+  envData: { [key: string]: object },
+  caps: Array<string>,
+  account: { account: string; guard: { keys: Array<string> } },
+) => {
+  const meta = Pact.lang.mkMeta(
+    `k:${account}`,
+    KADENA_CHAIN_ID,
+    KADENA_TX_CONFIG.GAS_PRICE,
+    KADENA_TX_CONFIG.GAS_LIMIT,
+    new Date().getTime(),
+    KADENA_TX_CONFIG.TTL,
+  );
+  return {
+    pactCode,
+    meta,
+    signingPubKey: account.account,
+    netWorkId: KADENA_NETWORK_ID,
+  };
+};
+
 export const localTxn = async (cmd: {}): Promise<
   | {
       status: string;
