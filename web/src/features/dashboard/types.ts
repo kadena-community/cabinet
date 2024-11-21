@@ -29,6 +29,7 @@ export interface Dashboard {
   LatestLocks: LatestLock[];
   LatestClaims: LatestClaim[];
   LatestVotes: VoteEvent[];
+  ActivePool: boolean;
 }
 
 export interface LatestLock {
