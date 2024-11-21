@@ -23,6 +23,7 @@ const CreatePollComponent: React.FC = () => {
     title: "",
     description: "",
     bondId: "",
+    options: [],
   });
 
   useEffect(() => {
@@ -41,11 +42,37 @@ const CreatePollComponent: React.FC = () => {
     setNewPoll((prev) => ({ ...prev, bondId }));
   };
 
+  const handleAddOption = () => {
+    if (newPoll.options.length < 10) {
+      setNewPoll((prev) => ({ ...prev, options: [...prev.options, ""] }));
+    }
+  };
+
+  const handleOptionChange = (index: number, value: string) => {
+    const updatedOptions = [...newPoll.options];
+    updatedOptions[index] = value;
+    setNewPoll((prev) => ({ ...prev, options: updatedOptions }));
+  };
+
+  const handleRemoveOption = (index: number) => {
+    const updatedOptions = newPoll.options.filter((_, i) => i !== index);
+    setNewPoll((prev) => ({ ...prev, options: updatedOptions }));
+  };
+
   const validateForm = () => {
     const titleValid = newPoll.title.length >= 5 && newPoll.title.length <= 150;
     const descriptionValid =
       newPoll.description.length >= 10 && newPoll.description.length <= 500;
-    return titleValid && descriptionValid && account && newPoll.bondId;
+    const optionsValid =
+      newPoll.options.length >= 2 &&
+      newPoll.options.every((option) => option.trim().length > 0);
+    return (
+      titleValid &&
+      descriptionValid &&
+      optionsValid &&
+      account &&
+      newPoll.bondId
+    );
   };
 
   const onSubmit = async () => {
@@ -55,7 +82,7 @@ const CreatePollComponent: React.FC = () => {
   };
 
   if (!account) {
-    return <p>Please log in to create a poll.</p>;
+    return;
   }
 
   if (!isCoreMember) {
@@ -69,8 +96,8 @@ const CreatePollComponent: React.FC = () => {
   return (
     <div className="card container mx-auto">
       <h4 className="text-2xl text-kadena">Create New Poll</h4>
-      <div className={styles.field}>
-        <label htmlFor="title" className={styles.label}>
+      <div className={`${styles.cardItem}`}>
+        <label htmlFor="title" className={`${styles.cardItem}`}>
           Title:
         </label>
         <input
@@ -82,7 +109,7 @@ const CreatePollComponent: React.FC = () => {
         />
       </div>
       <div className={styles.field}>
-        <label htmlFor="description" className={styles.label}>
+        <label htmlFor="description" className={`${styles.cardItem}`}>
           Description:
         </label>
         <textarea
@@ -93,8 +120,8 @@ const CreatePollComponent: React.FC = () => {
         />
       </div>
       <div className={styles.field}>
-        <label htmlFor="bond" className={styles.label}>
-          Select Bond:
+        <label htmlFor="bond" className={`${styles.cardItem}`}>
+          Lockup:
         </label>
         <select
           id="bond"
@@ -103,7 +130,7 @@ const CreatePollComponent: React.FC = () => {
           className={styles.input}
         >
           <option value="" disabled>
-            Select a bond
+            Select a lockup
           </option>
           {filteredBonds.map((bond) => (
             <option key={bond.bondId} value={bond.bondId}>
@@ -111,6 +138,35 @@ const CreatePollComponent: React.FC = () => {
             </option>
           ))}
         </select>
+      </div>
+      <div className={styles.field}>
+        <label className={`${styles.cardItem}`}>Vote Options:</label>
+        {newPoll.options.map((option, index) => (
+          <div key={index} className="flex items-center mb-2">
+            <input
+              type="text"
+              value={option}
+              onChange={(e) => handleOptionChange(index, e.target.value)}
+              className={`${styles.input} flex-1`}
+            />
+            <button
+              type="button"
+              onClick={() => handleRemoveOption(index)}
+              className={`${styles.button} ml-2`}
+            >
+              Remove
+            </button>
+          </div>
+        ))}
+        {newPoll.options.length < 10 && (
+          <button
+            type="button"
+            onClick={handleAddOption}
+            className={styles.button}
+          >
+            Add Option
+          </button>
+        )}
       </div>
       <button
         onClick={onSubmit}

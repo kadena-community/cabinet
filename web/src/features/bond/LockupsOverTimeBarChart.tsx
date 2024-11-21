@@ -5,20 +5,19 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-  ResponsiveContainer,
   TooltipProps,
+  ResponsiveContainer,
 } from "recharts";
 import { useAppSelector } from "@/app/hooks";
 import { selectLockupSummaryBar, selectDisplayAmount } from "./bondSlice";
 import styles from "@/styles/main.module.css";
 import { LockupDailyAmount } from "./types";
-import {AppLoader} from '@/features/components/Loader';
+import { AppLoader } from "@/features/components/Loader";
 
 const COLORS = {
   amount: "#4A9079",
   lockupCount: "#E41968",
 };
-
 
 interface CustomTooltipProps extends TooltipProps<number, string> {
   active?: boolean;
@@ -26,30 +25,31 @@ interface CustomTooltipProps extends TooltipProps<number, string> {
   label?: string;
 }
 
-const CustomTooltip: React.FC<CustomTooltipProps> = ({
-  active,
-  payload,
-  label,
-}) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className={styles.analyticsTooltip}>
-        <p>{`${label} : ${payload[0].value.toLocaleString()} KDA`}</p>
-      </div>
-    );
-  }
-  return null;
-};
-
-
-
 const LockupsOverTimeBarChart: React.FC = () => {
   const lockupSummaryBar = useAppSelector(selectLockupSummaryBar) || [];
   const displayAmount = useAppSelector(selectDisplayAmount);
 
+  const CustomTooltip: React.FC<CustomTooltipProps> = ({
+    active,
+    payload,
+    label,
+  }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className={styles.analyticsTooltip}>
+          <p>{`${label} : ${payload[0].value.toLocaleString()} ${displayAmount ? "KDA" : "lockups"} `}</p>
+        </div>
+      );
+    }
+    return null;
+  };
+
   if (!lockupSummaryBar) {
-    return <div><AppLoader true size="24px" stroke="#E27B38" /></div>
-;
+    return (
+      <div>
+        <AppLoader true size="24px" stroke="#E27B38" />
+      </div>
+    );
   }
 
   const data = lockupSummaryBar.map((lockup: LockupDailyAmount) => ({
@@ -72,14 +72,20 @@ const LockupsOverTimeBarChart: React.FC = () => {
           data={sortedData}
           margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
         >
-          <XAxis dataKey="date"
-                 tick={false} // Disable tick labels
-                 axisLine={{ stroke: "var(--color-axis)" }}
-                 label={{ value: 'Date', position: 'insideBottom', offset: 0 , fill: "var(--color-axis)" }}
+          <XAxis
+            dataKey="date"
+            tick={false} // Disable tick labels
+            axisLine={{ stroke: "var(--color-axis)" }}
+            label={{
+              value: "Date",
+              position: "insideBottom",
+              offset: 0,
+              fill: "var(--color-axis)",
+            }}
           />
           <YAxis
             tick={{ fill: "var(--color-axis)" }}
-            axisLine={{ stroke: "var(--color-axis)"}}
+            axisLine={{ stroke: "var(--color-axis)" }}
           />
           <Tooltip content={<CustomTooltip />} />
           <Area

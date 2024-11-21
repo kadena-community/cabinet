@@ -345,7 +345,7 @@ const Polls: React.FC = () => {
 
       {loading && (
         <div>
-          <AppLoader true size="96px" stroke="#E27B38" />
+          <AppLoader size="96px" stroke="#E27B38" />
         </div>
       )}
       {error && <Error message={error} />}

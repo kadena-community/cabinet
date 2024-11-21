@@ -38,7 +38,11 @@ const CustomTooltip = ({ active, payload }: any) => {
     return (
       <div className={styles.analyticsTooltip}>
         <p style={{ margin: 0 }}>
-          {payload[0].payload.name}: {value.toLocaleString()}
+          {payload[0].payload.name}:{" "}
+          {value.toLocaleString("en-US", {
+            style: "decimal",
+            maximumFractionDigits: 2,
+          })}
         </p>
       </div>
     );
@@ -64,7 +68,10 @@ const VoteDistributionBarChart: React.FC = () => {
   const sortedData = [...data].sort((a, b) => b.value - a.value);
 
   // Get the list of vote types, sorted alphabetically
-  const voteTypes = sortedData.map((d) => d.name).sort();
+  const voteTypes = sortedData
+    .map((d) => d.name)
+    .sort()
+    .reverse();
 
   // Create a mapping from vote types to colors
   const colorMap: { [voteType: string]: string } = {};

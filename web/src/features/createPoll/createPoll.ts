@@ -9,7 +9,7 @@ export default async function createPoll(
   poll: NewPoll,
 ): Promise<PactCommandToSign> {
   try {
-    const pactCode = `(${POLLER_CONTRACT}.create-poll (read-msg 'acc) (read-msg 'title) (read-msg 'bond) (read-msg 'description) )`;
+    const pactCode = `(${POLLER_CONTRACT}.create-poll (read-msg 'acc) (read-msg 'title) (read-msg 'bond) (read-msg 'description) (read-msg 'options) )`;
     const caps = [
       Pact.lang.mkCap("Gas capability", "Pay gas", "coin.GAS", []),
       Pact.lang.mkCap(
@@ -28,6 +28,7 @@ export default async function createPoll(
         title: poll.title,
         description: poll.description,
         bond: poll.bondId,
+        options: poll.options,
       };
 
       const signCmd = createSignCmd(

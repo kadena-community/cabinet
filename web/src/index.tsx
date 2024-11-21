@@ -1,27 +1,21 @@
-import '@reach/dialog/styles.css';
-import React from 'react';
-import { createRoot } from 'react-dom/client';
-import { Provider } from 'react-redux';
-import { store } from './app/store';
-import App from './App';
-import reportWebVitals from './reportWebVitals';
-import KadenaProvider from './features/components/KadenaProvider';
-import './styles/global-style.css';
+import "@reach/dialog/styles.css";
+import React from "react";
+import { createRoot } from "react-dom/client";
+import { Provider } from "react-redux";
+import { store } from "./app/store";
+import App from "./App";
+import KadenaProvider from "./features/components/KadenaProvider";
+import "./styles/global-style.css";
 
-const container = document.getElementById('root')!;
+const container = document.getElementById("root")!;
 const root = createRoot(container);
 
 root.render(
   <React.StrictMode>
     <Provider store={store}>
-        <KadenaProvider>
-            <App />
-        </KadenaProvider>
+      <KadenaProvider>
+        <App />
+      </KadenaProvider>
     </Provider>
-  </React.StrictMode>
+  </React.StrictMode>,
 );
-
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
-reportWebVitals();

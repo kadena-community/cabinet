@@ -27,12 +27,11 @@ interface BondLockupDistributionBarChartProps {
 interface CustomTooltipProps extends TooltipProps<number, string> {
   active?: boolean;
   payload?: any;
-  label?: string;
-}
+  label?: string; }
 
-const BondLockupDistributionBarChart: React.FC<BondLockupDistributionBarChartProps> = ({
-  bond,
-}) => {
+  const BondLockupDistributionBarChart: React.FC<BondLockupDistributionBarChartProps> = ({
+    bond,
+  }) => {
   const { lockedCount, claimedCount } = bond;
 
 

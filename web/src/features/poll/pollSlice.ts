@@ -101,7 +101,8 @@ export const fetchActivePolls = createAsyncThunk(
     const { jsonString, hasErrors } = response;
     if (jsonString && !hasErrors) {
       const data = JSON.parse(jsonString);
-      return data as PollDTO[];
+      const camelCasedData = camelcaseKeys(data, { deep: true });
+      return camelCasedData as PollDTO[];
     }
     throw new Error("Failed to fetch active polls or encountered errors");
   },

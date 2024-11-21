@@ -127,7 +127,7 @@ const AllBondLockupsComponent: React.FC<{ bondId: string }> = ({ bondId }) => {
           <span className="flex-1">Status</span>
           <span className="flex-1">Amount + MAX rewards</span>
           <span className="flex-1">Date</span>
-          {/*           <span className="flex-1">Explorer</span>*/}
+          <span className="flex-1">Explorer</span>
         </div>
         {bondLockups.length === 0 ? (
           <div className="text-center">No results found</div>
@@ -161,7 +161,7 @@ const AllBondLockupsComponent: React.FC<{ bondId: string }> = ({ bondId }) => {
                   {new Date(lockup.timestamp).toLocaleString()}
                 </p>
               </div>
-              {/*              <div className="flex-1 px-2">
+              <div className="flex-1 px-2">
                 <a
                   href={BLOCK_EXPLORER(lockup.requestKey)}
                   target="_blank"
@@ -169,7 +169,7 @@ const AllBondLockupsComponent: React.FC<{ bondId: string }> = ({ bondId }) => {
                 >
                   <FaExternalLinkAlt className="h-6 w-6" />
                 </a>
-  </div> */}
+              </div>
             </div>
           ))
         )}

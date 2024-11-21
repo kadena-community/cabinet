@@ -23,6 +23,12 @@ const COLORS: string[] = [
   "#0B1D2E",
 ];
 
+
+interface CustomTooltipProps extends TooltipProps<number, string> {
+  active?: boolean;
+  payload?: any;
+  label?: string; }
+
 const LockupDensityChart: React.FC = () => {
   const lockupDensity = useAppSelector(selectLockupDensity) || [];
     //console.log(lockupDensity);
@@ -31,17 +37,11 @@ const LockupDensityChart: React.FC = () => {
     return <div>Loading...</div>;
   }
 
-  interface CustomTooltipProps extends TooltipProps<number, string> {
-  active?: boolean;
-  payload?: any;
-  label?: string;
-  }
-
   const CustomTooltip: React.FC<CustomTooltipProps> = ({
-    active,
-    payload,
-    label,
-  }) => {
+  active,
+  payload,
+  label,
+}) => {
   if (active && payload && payload.length) {
     return (
       <div className={styles.analyticsTooltip}>

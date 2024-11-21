@@ -68,15 +68,11 @@ const ManageRewardsComponent: React.FC = () => {
 
     return (
         <div className="container mx-auto">
-            <h1 className="font-kadena text-3xl font-semibold">
-                Your Bonds
-            </h1>
-            {loading && (
-                <p className="text-lg">Loading bonds...</p>
-            )}
+            <h1 className="font-kadena text-3xl font-semibold">Your Bonds</h1>
+            {loading && <p className="text-lg">Loading lockups...</p>}
             {error && (
                 <p className="text-lg text-red-500">
-                    Error fetching bonds: {error}
+                    Error fetching lockups: {error}
                 </p>
             )}
             {!loading && !error && allBonds.length > 0 && (
@@ -84,22 +80,25 @@ const ManageRewardsComponent: React.FC = () => {
                     {allBonds
                         .filter((bond) => bond.creator === account?.account)
                         .map((bond) => (
-                            <li
-                                key={bond.bondId}
-                                className="card mb-4"
-                            >
+                            <li key={bond.bondId} className="card mb-4">
                                 <div className="flex mx-auto justify-between">
                                     <div className={`${styles.cardItem} mb-3`}>
-                                        <h3 className="text-lg">Bond Id</h3>
-                                        <p className="text-xl">
-                                            {bond.bondId}
-                                        </p>
+                                        <h3 className="text-lg">Id</h3>
+                                        <p className="text-xl">{bond.bondId}</p>
                                     </div>
 
                                     <div className={`${styles.cardItem} mb-3`}>
-                                        <h3 className="text-lg">Available  Rewards</h3>
+                                        <h3 className="text-lg">
+                                            Available Rewards
+                                        </h3>
                                         <p className="text-xl">
-                                            {bondAvailableRewards((bond))}
+                                            {bondAvailableRewards(
+                                                bond,
+                                            ).toLocaleString("en-US", {
+                                                style: "decimal",
+                                                maximumFractionDigits: 2,
+                                            })}{" "}
+                                            KDA
                                         </p>
                                     </div>
                                     <div className={`${styles.cardItem} mb-3`}>
@@ -109,15 +108,19 @@ const ManageRewardsComponent: React.FC = () => {
                                         </p>
                                     </div>
                                     <div className={`${styles.cardItem} mb-3`}>
-                                        <h3 className="text-lg">Active Bonders</h3>
+                                        <h3 className="text-lg">
+                                            Active Lockups
+                                        </h3>
                                         <p className="text-xl">
                                             {bond.activeBonders}
                                         </p>
                                     </div>
                                 </div>
-                                <p className="text-2xl text-kadena">Lockup Options</p>
+                                <p className="text-2xl text-kadena">
+                                    Lockup Options
+                                </p>
                                 <LockupOptionsDisplay bond={bond} />
-                                
+
                                 <button
                                     className={styles.button}
                                     onClick={() => handleOpenModal(bond)}

@@ -18,8 +18,7 @@ const COLORS = ["#4A9079", "#E41968", "#FF8042"];
 interface CustomTooltipProps extends TooltipProps<number, string> {
   active?: boolean;
   payload?: any;
-  label?: string;
-}
+  label?: string; }
 
 const BondRewardsHorizontalBarChart: React.FC<{ bond: any }> = ({ bond }) => {
   const { totalRewards, lockedRewards, givenRewards } = bond;

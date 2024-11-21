@@ -47,7 +47,10 @@ const VotesOverTimeAreaChart: React.FC = () => {
           <p>{date}:</p>
           {payload.map((entry: any, index: number) => (
             <p key={`tooltip-${index}`}>
-              {`${entry.name}: ${entry.value}`}
+              {`${entry.name}: ${entry.value.toLocaleString("en-US", {
+                style: "decimal",
+                maximumFractionDigits: 2,
+              })}`}
             </p>
           ))}
         </div>
@@ -58,8 +61,10 @@ const VotesOverTimeAreaChart: React.FC = () => {
 
   // Extract all unique voting options (actions) and sort them alphabetically
   const uniqueActions = Array.from(
-    new Set(votesOverTime.map((vote) => vote.action))
-  ).sort();
+    new Set(votesOverTime.map((vote) => vote.action)),
+  )
+    .sort()
+    .reverse();
 
   // Create a mapping from action names to colors
   const colorMap: { [action: string]: string } = {};
@@ -90,7 +95,7 @@ const VotesOverTimeAreaChart: React.FC = () => {
 
   // Sort the data by date
   const sortedData = data.sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
   );
 
   // Custom legend component to ensure consistent line colors and display all options

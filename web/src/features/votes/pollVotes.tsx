@@ -4,7 +4,7 @@ import {
   toggleDisplayPollingPower,
   selectDisplayPollingPower,
 } from "./votesSlice";
-import { PollDTO } from "../poll/types";
+import { PollDTO, PollStatus } from "../poll/types";
 import styles from "../../styles/main.module.css";
 import VotesOverTimeBarChart from "./votesOverTimeChart";
 import VoteDistributionPieChart from "./totalVotesChart";
@@ -111,21 +111,15 @@ const PollDetailsModal: React.FC<PollDetailsModalProps> = ({
             <h2 className="text-2xl font-semibold">{poll.pollId} Details</h2>
             <div className="flex items-center md:mt-0 md:ml-auto">
               <span
-                className={`px-2 py-1 rounded ${
-                  poll.status === 1
-                    ? "bg-k-Green-default"
-                    : poll.status === 0
-                      ? "bg-k-Orange-default"
-                      : poll.status === 2
-                        ? "bg-k-Pink-default"
-                        : "bg-gray-400"
-                }`}
+                className={`px-2 py-1 rounded text-white
+                      bg-k-Orange-default
+                `}
               >
-                {poll.status === 2
+                {poll.status === PollStatus.Review
                   ? `Poll opens in ${timeRemaining}`
-                  : poll.status === 0
+                  : poll.status === PollStatus.Open
                     ? `Vote closes in ${timeRemaining}`
-                    : poll.status === 1
+                    : poll.status === PollStatus.Closed
                       ? "Poll closed"
                       : "Unknown status"}
               </span>
