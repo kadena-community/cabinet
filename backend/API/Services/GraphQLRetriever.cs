@@ -5,7 +5,7 @@ using Dab.API.Models.Events;
 
 namespace Dab.API.Services
 {
-    public class ChainwebGraphQLRetriever : IChainwebDataRetriever
+    public class ChainwebGraphQLRetriever 
     {
         private readonly ILogger<ChainwebGraphQLRetriever> _logger;
         private readonly ICacheService _cacheService;
@@ -21,9 +21,9 @@ namespace Dab.API.Services
             _graphQLEndpoint = configuration.GetSection("DabContractConfig").GetValue<string>("GraphQLEndpoint") ?? "https://graph.kadena.network/graphql";
         }
 
-        public async Task<List<LockEvent>> RetrieveLockData()
+        public async Task<List<T>> RetrieveEventDataAsync<T>(string qualifiedEventName, Func<JsonElement, T> parseFunction)
         {
-            var allLockEvents = new List<LockEvent>();
+            var allEvents = new List<T>();
             string endCursor = null;
             bool hasNextPage = true;
 
@@ -31,12 +31,12 @@ namespace Dab.API.Services
             {
                 try
                 {
-                    _logger.LogInformation("Retrieving LOCK event data via GraphQL");
+                    _logger.LogInformation($"Retrieving {qualifiedEventName} event data via GraphQL");
 
                     var query = $@"
-                        query LockEventSearch($after: String) {{
+                        query EventSearch($after: String) {{
                           events(
-                            qualifiedEventName: ""{_namespace}.bonder.LOCK""
+                            qualifiedEventName: ""{qualifiedEventName}""
                             first: 1000
                             after: $after
                           ) {{
@@ -59,19 +59,27 @@ namespace Dab.API.Services
 
                     var variables = new { after = endCursor };
 
-                    var graphQLResponse = await ExecuteGraphQLQueryAsync(query, "LockEventSearch", variables);
+                    var graphQLResponse = await ExecuteGraphQLQueryAsync(query, "EventSearch", variables);
 
-                    var lockEvents = ParseLockEvents(graphQLResponse);
-
-                    allLockEvents.AddRange(lockEvents);
-
-                    // Update pagination info
+                    // Parse events using the provided parse function
                     if (graphQLResponse.TryGetProperty("data", out var dataElement) &&
                         dataElement.TryGetProperty("events", out var eventsElement) &&
-                        eventsElement.TryGetProperty("pageInfo", out var pageInfoElement))
+                        eventsElement.TryGetProperty("edges", out var edgesElement))
                     {
-                        hasNextPage = pageInfoElement.GetProperty("hasNextPage").GetBoolean();
-                        endCursor = pageInfoElement.GetProperty("endCursor").GetString();
+                        foreach (var edge in edgesElement.EnumerateArray())
+                        {
+                            if (edge.TryGetProperty("node", out var nodeElement))
+                            {
+                                var parsedEvent = parseFunction(nodeElement);
+                                allEvents.Add(parsedEvent);
+                            }
+                        }
+
+                        if (eventsElement.TryGetProperty("pageInfo", out var pageInfoElement))
+                        {
+                            hasNextPage = pageInfoElement.GetProperty("hasNextPage").GetBoolean();
+                            endCursor = pageInfoElement.GetProperty("endCursor").GetString();
+                        }
                     }
                     else
                     {
@@ -85,84 +93,26 @@ namespace Dab.API.Services
                 }
             }
 
-            return allLockEvents;
+            return allEvents;
         }
 
-        public async Task<List<ClaimEvent>> RetrieveClaimData()
-        {
-            var allClaimEvents = new List<ClaimEvent>();
-            string endCursor = null;
-            bool hasNextPage = true;
+        public async Task<List<LockEvent>> RetrieveLockData() =>
+            await RetrieveEventDataAsync($"{_namespace}.bonder.LOCK", ParseLockEvent);
 
-            while (hasNextPage)
-            {
-                try
-                {
-                    _logger.LogInformation("Retrieving CLAIM event data via GraphQL");
+        public async Task<List<ClaimEvent>> RetrieveClaimData() =>
+            await RetrieveEventDataAsync($"{_namespace}.bonder.CLAIM", ParseClaimEvent);
 
-                    var query = $@"
-                        query ClaimEventSearch($after: String) {{
-                          events(
-                            qualifiedEventName: ""{_namespace}.bonder.CLAIM""
-                            first: 1000
-                            after: $after
-                          ) {{
-                            edges {{
-                              cursor
-                              node {{
-                                parameters
-                                requestKey
-                                block {{
-                                  creationTime
-                                }}
-                              }}
-                            }}
-                            pageInfo {{
-                              hasNextPage
-                              endCursor
-                            }}
-                          }}
-                        }}";
-
-                    var variables = new { after = endCursor };
-
-                    var graphQLResponse = await ExecuteGraphQLQueryAsync(query, "ClaimEventSearch", variables);
-
-                    var claimEvents = ParseClaimEvents(graphQLResponse);
-
-                    allClaimEvents.AddRange(claimEvents);
-
-                    // Update pagination info
-                    if (graphQLResponse.TryGetProperty("data", out var dataElement) &&
-                        dataElement.TryGetProperty("events", out var eventsElement) &&
-                        eventsElement.TryGetProperty("pageInfo", out var pageInfoElement))
-                    {
-                        hasNextPage = pageInfoElement.GetProperty("hasNextPage").GetBoolean();
-                        endCursor = pageInfoElement.GetProperty("endCursor").GetString();
-                    }
-                    else
-                    {
-                        hasNextPage = false;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "GraphQL retrieval failed");
-                    break;
-                }
-            }
-
-            return allClaimEvents;
-        }
+        public async Task<List<VoteEvent>> RetrieveVoteData() =>
+            await RetrieveEventDataAsync($"{_namespace}.poller.VOTE", ParseVoteEvent);
 
         private async Task<JsonElement> ExecuteGraphQLQueryAsync(string query, string operationName, object variables)
         {
             using var client = new HttpClient();
             var requestBody = new
             {
-                query = query,
-                operationName = operationName,
-                variables = variables,
+                query,
+                operationName,
+                variables,
                 extensions = new { }
             };
 
@@ -180,82 +130,47 @@ namespace Dab.API.Services
 
             using var jsonDocument = JsonDocument.Parse(responseString);
 
-            return jsonDocument.RootElement.Clone(); // Clone to prevent disposal issues
+            return jsonDocument.RootElement.Clone();
         }
 
-        private List<LockEvent> ParseLockEvents(JsonElement root)
+        private LockEvent ParseLockEvent(JsonElement nodeElement) =>
+            ParseEvent(nodeElement, parameters => new LockEvent
+            {
+                BondId = parameters.Length > 0 ? parameters[0].GetString() : "",
+                Account = parameters.Length > 1 ? parameters[1].GetString() : "",
+                Amount = parameters.Length > 2 ? decimal.Parse(parameters[2].GetRawText()) : 0,
+                Rewards = parameters.Length > 3 ? decimal.Parse(parameters[3].GetRawText()) : 0,
+                LockupLength = parameters.Length > 4 ? ParseLockupLength(parameters[4]) : 0,
+                Timestamp = DateTime.Parse(nodeElement.GetProperty("block").GetProperty("creationTime").GetString()),
+                RequestKey = nodeElement.GetProperty("requestKey").GetString() ?? ""
+            });
+
+        private ClaimEvent ParseClaimEvent(JsonElement nodeElement) =>
+            ParseEvent(nodeElement, parameters => new ClaimEvent
+            {
+                BondId = parameters.Length > 0 ? parameters[0].GetString() : "",
+                Account = parameters.Length > 1 ? parameters[1].GetString() : "",
+                OriginalAmount = parameters.Length > 2 ? decimal.Parse(parameters[2].GetRawText()) : 0,
+                TotalAmount = parameters.Length > 3 ? decimal.Parse(parameters[3].GetRawText()) : 0,
+                Timestamp = DateTime.Parse(nodeElement.GetProperty("block").GetProperty("creationTime").GetString()),
+                RequestKey = nodeElement.GetProperty("requestKey").GetString() ?? ""
+            });
+
+        private VoteEvent ParseVoteEvent(JsonElement nodeElement) =>
+            ParseEvent(nodeElement, parameters => new VoteEvent
+            {
+                Account = parameters.Length > 0 ? parameters[0].GetString() : "",
+                PollId = parameters.Length > 1 ? parameters[1].GetString() : "",
+                Action = parameters.Length > 2 ? parameters[2].GetString() : "",
+                Timestamp = DateTime.Parse(nodeElement.GetProperty("block").GetProperty("creationTime").GetString()),
+                RequestKey = nodeElement.GetProperty("requestKey").GetString() ?? ""
+            });
+
+        private T ParseEvent<T>(JsonElement nodeElement, Func<JsonElement[], T> createEvent)
         {
-            var lockEvents = new List<LockEvent>();
-
-            if (root.TryGetProperty("data", out var dataElement) &&
-                dataElement.TryGetProperty("events", out var eventsElement) &&
-                eventsElement.TryGetProperty("edges", out var edgesElement))
-            {
-                foreach (var edge in edgesElement.EnumerateArray())
-                {
-                    if (edge.TryGetProperty("node", out var nodeElement))
-                    {
-                        var parametersString = nodeElement.GetProperty("parameters").GetString();
-                        var parametersJson = JsonSerializer.Deserialize<JsonElement[]>(parametersString);
-
-                        var lockEvent = new LockEvent
-                        {
-                            BondId = parametersJson.Length > 0 ? parametersJson[0].GetString() : "",
-                            Account = parametersJson.Length > 1 ? parametersJson[1].GetString() : "",
-                            Amount = parametersJson.Length > 2 ? decimal.Parse(parametersJson[2].GetRawText()) : 0,
-                            Rewards = parametersJson.Length > 3 ? decimal.Parse(parametersJson[3].GetRawText()) : 0,
-                            LockupLength = parametersJson.Length > 4 ? ParseLockupLength(parametersJson[4]) : 0,
-                            Timestamp = DateTime.Parse(nodeElement.GetProperty("block").GetProperty("creationTime").GetString()),
-                            RequestKey = nodeElement.GetProperty("requestKey").GetString() ?? ""
-                        };
-
-                        lockEvents.Add(lockEvent);
-                    }
-                }
-            }
-            else
-            {
-                _logger.LogError("Unexpected JSON structure in ParseLockEvents.");
-            }
-
-            return lockEvents;
-        }
-
-        private List<ClaimEvent> ParseClaimEvents(JsonElement root)
-        {
-            var claimEvents = new List<ClaimEvent>();
-
-            if (root.TryGetProperty("data", out var dataElement) &&
-                dataElement.TryGetProperty("events", out var eventsElement) &&
-                eventsElement.TryGetProperty("edges", out var edgesElement))
-            {
-                foreach (var edge in edgesElement.EnumerateArray())
-                {
-                    if (edge.TryGetProperty("node", out var nodeElement))
-                    {
-                        var parametersString = nodeElement.GetProperty("parameters").GetString();
-                        var parametersJson = JsonSerializer.Deserialize<JsonElement[]>(parametersString);
-
-                        var claimEvent = new ClaimEvent
-                        {
-                            BondId = parametersJson.Length > 0 ? parametersJson[0].GetString() : "",
-                            Account = parametersJson.Length > 1 ? parametersJson[1].GetString() : "",
-                            OriginalAmount = parametersJson.Length > 2 ? decimal.Parse(parametersJson[2].GetRawText()) : 0,
-                            TotalAmount = parametersJson.Length > 3 ? decimal.Parse(parametersJson[3].GetRawText()) : 0,
-                            Timestamp = DateTime.Parse(nodeElement.GetProperty("block").GetProperty("creationTime").GetString()),
-                            RequestKey = nodeElement.GetProperty("requestKey").GetString() ?? ""
-                        };
-
-                        claimEvents.Add(claimEvent);
-                    }
-                }
-            }
-            else
-            {
-                _logger.LogError("Unexpected JSON structure in ParseClaimEvents.");
-            }
-
-            return claimEvents;
+            var parametersString = nodeElement.GetProperty("parameters").GetString();
+            var parameters = JsonSerializer.Deserialize<JsonElement[]>(parametersString);
+            return createEvent(parameters);
         }
 
         private int ParseLockupLength(JsonElement lockupLengthParam)
@@ -277,7 +192,5 @@ namespace Dab.API.Services
                 return 0;
             }
         }
-
-        // Implement other methods from IChainwebDataRetriever as needed
     }
 }

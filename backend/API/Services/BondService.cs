@@ -13,19 +13,17 @@ public class BondService : IBondService
     private readonly ILogger<BondService> _logger;
     private readonly ICacheService _cacheService;
     private readonly IPactService _pactService;
-    private readonly IChainwebDataRetriever _dataRetriever;
     private readonly ChainwebGraphQLRetriever _graphRetriever;
     private readonly DabContractConfig _dabConfig;
     private readonly string chain;
     private readonly string ns;
     private readonly int expirySeconds = 20;
 
-    public BondService(ILogger<BondService> logger, ICacheService cacheService, IPactService pactService, IConfiguration configuration, IChainwebDataRetriever dataRetriever, ChainwebGraphQLRetriever graphRetriever)
+    public BondService(ILogger<BondService> logger, ICacheService cacheService, IPactService pactService, IConfiguration configuration, ChainwebGraphQLRetriever graphRetriever)
     {
         _logger = logger;
         _cacheService = cacheService;
         _pactService = pactService;
-        _dataRetriever = dataRetriever;
         _graphRetriever = graphRetriever;
 
         _dabConfig = (configuration.GetSection("DabContractConfig").Get<DabContractConfig>() ??
@@ -34,46 +32,54 @@ public class BondService : IBondService
         ns = _dabConfig.Namespace;
     }
 
-public async Task<List<LockEvent>> GetAllLockupEvents(bool ignoreCache = false)
-{
-    // var locksInContract = await GetAllLockups(ignoreCache);
-
-    // if (!locksInContract.Any()) return new List<LockEvent>();
-
-    var cacheKey = CacheKeys.AllLockupEvents();
-
-    if (!ignoreCache && await _cacheService.HasItem(cacheKey))
+    public async Task<List<LockEvent>> GetAllLockupEvents(bool ignoreCache = false)
     {
-        var cached = await _cacheService.GetItem<string>(cacheKey);
-        return JsonSerializer.Deserialize<List<LockEvent>>(cached) ?? new();
+        var cacheKey = CacheKeys.AllLockupEvents();
+
+        if (!ignoreCache && await _cacheService.HasItem(cacheKey))
+        {
+            var cached = await _cacheService.GetItem<string>(cacheKey);
+            return JsonSerializer.Deserialize<List<LockEvent>>(cached) ?? new();
+        }
+
+        var lockEvents = (await _graphRetriever.RetrieveLockData())
+            .GroupBy(e => e.RequestKey)
+            .Select(g => g.First())
+            .ToList();
+
+        var ret = Utils.JsonPrettify(lockEvents);
+
+        await _cacheService.SetItem(cacheKey, ret, 30 * expirySeconds);
+        return lockEvents;
     }
 
-    // Temporarily commented out
-    var lockEvents = await _graphRetriever.RetrieveLockData();
+    public async Task<List<VoteEvent>> GetAllVoteEvents(bool ignoreCache = false)
+    {
+        var cacheKey = CacheKeys.AllVoteEvents();
 
-    // var lockEvents = locksInContract.Select(lockup => new LockEvent
-    // {
-    //     BondId = lockup.BondId,
-    //     Account = lockup.Account,
-    //     Amount = lockup.KdaLocked,
-    //     Rewards = lockup.MaxKdaRewards,
-    //     LockupLength = lockup.LockupOption.OptionLength,
-    //     Timestamp = lockup.LockupStartTime.Date,
-    //     RequestKey = "", //lockup.LockupId,
-    //     Type = "Lock"
-    // }).ToList();
+        if (!ignoreCache && await _cacheService.HasItem(cacheKey))
+        {
+            var cached = await _cacheService.GetItem<string>(cacheKey);
+            return JsonSerializer.Deserialize<List<VoteEvent>>(cached) ?? new();
+        }
 
-    var ret = Utils.JsonPrettify(lockEvents);
+        var voteEvents = (await _graphRetriever.RetrieveVoteData())
+            .GroupBy(e => e.RequestKey)
+            .Select(g => g.First())
+            .ToList();
 
-    await _cacheService.SetItem(cacheKey, ret, 30 * expirySeconds);
-    return lockEvents;
-}
+
+        var ret = Utils.JsonPrettify(voteEvents);
+
+        await _cacheService.SetItem(cacheKey, ret, 30 * expirySeconds);
+        return voteEvents;
+    }
+
 
 
 
     public async Task<List<ClaimEvent>> GetAllClaimEvents(bool ignoreCache = false)
     {
-
 
         var cacheKey = CacheKeys.AllClaimEvents();
 
@@ -83,7 +89,11 @@ public async Task<List<LockEvent>> GetAllLockupEvents(bool ignoreCache = false)
             return JsonSerializer.Deserialize<List<ClaimEvent>>(cached) ?? new();
         }
 
-        var claimEvents = await _graphRetriever.RetrieveClaimData();
+        var claimEvents = (await _graphRetriever.RetrieveClaimData())
+            .GroupBy(e => e.RequestKey)
+            .Select(g => g.First())
+            .ToList();
+
 
         var ret = Utils.JsonPrettify(claimEvents);
 

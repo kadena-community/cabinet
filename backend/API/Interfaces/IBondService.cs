@@ -9,6 +9,7 @@ public interface IBondService
     Task<List<Lockup>> GetAllLockups(bool ignoreCache = false);
     Task<List<LockEvent>> GetAllLockupEvents(bool ignoreCache = false);
     Task<List<ClaimEvent>> GetAllClaimEvents(bool ignoreCache = false);
+    Task<List<VoteEvent>> GetAllVoteEvents(bool ignoreCache = false);
     Task<Lockup> GetLockup(string lockupId, bool ignoreCache = false);
     Task<List<Lockup>> GetAccountLockups(string account, bool ignoreCache = false);
     Task<List<IBondEvent>> GetAllLockupsFromBond(string bondId, bool ignoreCache = false);

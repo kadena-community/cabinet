@@ -77,6 +77,8 @@ namespace Dab.API.Models.Cache
 
         public static string AllVotes() => $"all-votes";
 
+                public static string AllVoteEvents() => $"all-vote-events";
+
         public static string ApiAnalytics() => $"api-dashboard";
     }
 }

@@ -98,7 +98,6 @@ builder.Services.AddSingleton(mapper);
 // Business logic services
 // builder.Services.AddSingleton<IDaoService, DaoService>();
 builder.Services.AddSingleton<IPactService, PactService>();
-builder.Services.AddSingleton<IChainwebDataRetriever, ChainwebDataRetriever>();
 builder.Services.AddSingleton<ChainwebGraphQLRetriever>();
 builder.Services.AddSingleton<IBondService, BondService>();
 builder.Services.AddSingleton<IPollService, PollService>();
