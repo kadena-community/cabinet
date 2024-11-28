@@ -3,4 +3,5 @@ export interface NewPoll {
   title: string;
   description: string;
   bondId: string;
+  options: string[];
 }

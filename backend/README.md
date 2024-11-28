@@ -7,10 +7,7 @@ Cabinet Backend API serves as the middle layer consumed by the Cabinet UI. It is
 To run the Cabinet Backend API, ensure you have the following:
 
 - **Chainweb Node Instance**: An instance of the [Chainweb Node](https://github.com/kadena-io/chainweb-node) with the parameter `allowReadsInLocal: true` set for local reads.
-- **One of the Following**:
-  - A [Kadena GraphQL](https://github.com/kadena-community/kadena.js/tree/main/packages/apps/graph) server.
-  - Access to the `events` endpoint from [Chainweb Data](https://github.com/kadena-io/chainweb-data).
-  - SQL access to the PostgreSQL database from [Chainweb Data](https://github.com/kadena-io/chainweb-data).
+- A **[Kadena GraphQL](https://github.com/kadena-community/kadena.js/tree/main/packages/apps/graph)** server.
 - **.NET SDK**: Version 7.0 or 8.0 with all required dependencies installed.
 - **Redis**: A running Redis instance for caching purposes.
 - **Docker & Docker Compose**: Alternatively, you can deploy the entire stack using Docker Compose.
@@ -45,11 +42,7 @@ To run the Cabinet Backend API, ensure you have the following:
      "DabContractConfig": {
        "ContractChain": "0",
        "Namespace": "n_yournamespace",
-       "ChainwebDataUrl": "http://127.0.0.1:8080",
        "GraphQLEndpoint": "https://127.0.0.1:4000/graph"
-     },
-     "ConnectionStrings": {
-       "DefaultConnection": "Host=127.0.0.1;Port=5432;Database=devnet;Username=devnet;Password=;" # only if you exposed port 5432
      }
    }
    ```
@@ -81,10 +74,7 @@ To run the Cabinet Backend API, ensure you have the following:
 - **DabContractConfig**:
   - `ContractChain`: The specific chain ID for contract interactions.
   - `Namespace`: Namespace used for the contracts.
-  - `ChainwebDataUrl`: URL for accessing Chainweb Data API.
   - `GraphQLEndpoint`: The endpoint for Kadena's GraphQL server.
-- **ConnectionStrings**:
-  - `DefaultConnection`: PostgreSQL connection string for accessing historical data directly from the database.
 
 ## Getting Started
 
@@ -114,9 +104,5 @@ Here's a concise breakdown of the folder names and their specific purposes:
 
 ## Data Sources
 
-The API fetches and processes blockchain historical data from the following sources:
-
-1. **Chainweb Data**: Retrieves transaction and event history directly from Chainweb’s API endpoints.
-2. **PostgreSQL Database**: Queries historical data stored locally for faster access and caching.
-3. **GraphQL**: Pulls data using GraphQL queries from Kadena’s testnet or mainnet.
+The API fetches and processes blockchain historical data using **GraphQL** event queries from Kadena’s testnet or mainnet.
 

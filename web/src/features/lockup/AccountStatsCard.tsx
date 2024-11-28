@@ -28,7 +28,7 @@ const StatsCard: React.FC<StatsCardProps> = ({ account }) => {
         <h1 className="text-xl font-semibold">Your Lockup Details</h1>
         {loading && (
           <div>
-            <AppLoader true size="48px" stroke="#E27B38" />
+            <AppLoader size="48px" stroke="#E27B38" />
           </div>
         )}
         {!loading && (
@@ -75,23 +75,23 @@ const StatsCard: React.FC<StatsCardProps> = ({ account }) => {
                   KDA
                 </p>
               </div>
-            {stats.NextClaimTime && (
-              <div className={`${styles.cardItem} mb-3`}>
-                <h3 className="text-lg">Next Unlock Date</h3>
-                <p className="text-2xl">
-                  {new Date(stats.NextClaimTime).toLocaleDateString()}
-                </p>
-              </div>
-            )}
-            {stats.LastClaimTime &&
-             stats.LastClaimTime !== stats.NextClaimTime && (
-               <div className={`${styles.cardItem} mb-3`}>
-                 <h3 className="text-lg">Last Unlock Date</h3>
-                 <p className="text-2xl">
-                   {new Date(stats.LastClaimTime).toLocaleDateString()}
-                 </p>
-               </div>
-            )}
+              {stats.NextClaimTime && (
+                <div className={`${styles.cardItem} mb-3`}>
+                  <h3 className="text-lg">Next Unlock Date</h3>
+                  <p className="text-2xl">
+                    {new Date(stats.NextClaimTime).toLocaleDateString()}
+                  </p>
+                </div>
+              )}
+              {stats.LastClaimTime &&
+                stats.LastClaimTime !== stats.NextClaimTime && (
+                  <div className={`${styles.cardItem} mb-3`}>
+                    <h3 className="text-lg">Last Unlock Date</h3>
+                    <p className="text-2xl">
+                      {new Date(stats.LastClaimTime).toLocaleDateString()}
+                    </p>
+                  </div>
+                )}
             </div>
           </div>
         )}

@@ -47,7 +47,10 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({
       <div className={styles.analyticsTooltip}>
         {payload.map((entry: any, index: number) => (
           <p key={`tooltip-${index}`}>
-            {`${entry.name}: ${entry.value.toFixed(2)}%`}
+            {`${entry.name}: ${entry.value.toLocaleString("en-US", {
+              style: "decimal",
+              maximumFractionDigits: 2,
+            })}%`}
           </p>
         ))}
       </div>
@@ -72,7 +75,8 @@ const VoteDistributionBarChart: React.FC<VoteDistributionBarChartProps> = ({
   // Get the list of option names, sort them alphabetically
   const optionNames = poll.pollOptions
     .map((option) => option.optionName)
-    .sort();
+    .sort()
+    .reverse();
 
   // Create a mapping from option names to colors
   const colorMap: { [optionName: string]: string } = {};

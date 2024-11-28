@@ -244,7 +244,7 @@ function getAugmentedHooks<T extends Connector>(
     return useMemo(() => {
       // to ensure connectors remain fresh, we condition re-renders on loaded, isActive and chainId
       // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-      void isActive && networkId;
+      //void isActive && networkId;
       if (enabled) {
         if (connector.customProvider) return connector.customProvider as T;
         // see tsdoc note above for return type explanation.

@@ -11,7 +11,6 @@ import { PactLockupOption } from "../lockup/types";
 const CreateBondComponent: React.FC = () => {
   const dispatch = useAppDispatch();
   const { account } = useKadenaReact();
-  if (!account) return null;
 
   const isCoreMember = useAppSelector((state: RootState) =>
     selectIsCoreMember(state),
@@ -24,7 +23,7 @@ const CreateBondComponent: React.FC = () => {
   }, [dispatch, account]);
 
   const handleSubmit = useCreateBond();
-
+  const safeAccount = account ? account.account : "";
   const [lockupOptions, setLockupOptions] = useState<PactLockupOption[]>([]);
   const [newBond, setNewBond] = useState<NewBond>({
     startTime: "",
@@ -34,7 +33,7 @@ const CreateBondComponent: React.FC = () => {
     maxAmount: 100000.0,
     minAmount: 1000.0,
     totalRewards: 10000.0,
-    creator: account?.account,
+    creator: safeAccount,
   });
 
   const handleLockupOptionChange = (
@@ -75,7 +74,7 @@ const CreateBondComponent: React.FC = () => {
     setLockupOptions((prevOptions) => {
       const newOption: PactLockupOption = {
         "option-name": "10 minutes",
-        "option-length": 600,
+        "option-length": { int: 600 }, // Initialize as an object with "int"
         "time-multiplier": 1.1,
         "poller-max-boost": 1.0,
         "polling-power-multiplier": 1.0,
@@ -99,20 +98,22 @@ const CreateBondComponent: React.FC = () => {
     }
   };
 
+  if (!account) return;
+
   if (!isCoreMember) {
     return (
       <p className={styles.note}>
-        You must be a core member to create a lockup oportunity.
+        You must be a core member to create a lockup.
       </p>
     );
   }
 
   return (
     <div className="card container mx-auto">
-      <h4 className="text-2xl text-kadena">Create New Lockup Oportunity</h4>
+      <h4 className="text-2xl text-kadena">Create New Lockup</h4>
 
       <div className={styles.field}>
-        <label htmlFor="start-time" className={styles.label}>
+        <label htmlFor="start-time" className={`${styles.cardItem}`}>
           Start Time:
         </label>
         <input
@@ -125,7 +126,7 @@ const CreateBondComponent: React.FC = () => {
       </div>
 
       <div className={styles.field}>
-        <label htmlFor="base-apr" className={styles.label}>
+        <label htmlFor="base-apr" className={`${styles.cardItem}`}>
           Base APR (%):
         </label>
         <input
@@ -144,7 +145,7 @@ const CreateBondComponent: React.FC = () => {
       </div>
 
       <div className={styles.field}>
-        <label htmlFor="min-amount" className={styles.label}>
+        <label htmlFor="min-amount" className={`${styles.cardItem}`}>
           Minimum Amount:
         </label>
         <input
@@ -163,7 +164,7 @@ const CreateBondComponent: React.FC = () => {
       </div>
 
       <div className={styles.field}>
-        <label htmlFor="max-amount" className={styles.label}>
+        <label htmlFor="max-amount" className={`${styles.cardItem}`}>
           Maximum Amount:
         </label>
         <input
@@ -179,7 +180,7 @@ const CreateBondComponent: React.FC = () => {
       </div>
 
       <div className={styles.field}>
-        <label htmlFor="total-rewards" className={styles.label}>
+        <label htmlFor="total-rewards" className={`${styles.cardItem}`}>
           Total Rewards:
         </label>
         <input
@@ -198,7 +199,7 @@ const CreateBondComponent: React.FC = () => {
       </div>
 
       <div className={styles.field}>
-        <label htmlFor="whitelisted-accounts" className={styles.label}>
+        <label htmlFor="whitelisted-accounts" className={`${styles.cardItem}`}>
           Whitelisted Accounts:
         </label>
         <textarea
@@ -216,7 +217,10 @@ const CreateBondComponent: React.FC = () => {
 
       {lockupOptions.map((option, index) => (
         <div key={index} className={styles.fieldset}>
-          <label htmlFor={`OptionName-${index}`} className={styles.label}>
+          <label
+            htmlFor={`OptionName-${index}`}
+            className={`${styles.cardItem}`}
+          >
             Option Name:
           </label>
           <input
@@ -230,21 +234,26 @@ const CreateBondComponent: React.FC = () => {
             className={styles.input}
           />
 
-          <label htmlFor={`Length-${index}`} className={styles.label}>
-            Length:
+          <label htmlFor={`Length-${index}`} className={`${styles.cardItem}`}>
+            Length (seconds):
           </label>
           <input
-            type="text"
+            type="number"
             id={`Length-${index}`}
-            value={option["option-length"]}
+            value={option["option-length"]?.int || ""}
             onChange={(e) =>
-              handleLockupOptionChange(index, "option-length", e.target.value)
+              handleLockupOptionChange(index, "option-length", {
+                int: parseInt(e.target.value) || 0,
+              })
             }
-            placeholder="Length (e.g., '3 months')"
+            placeholder="Length in seconds (e.g., 600)"
             className={styles.input}
           />
 
-          <label htmlFor={`TimeMultiplier-${index}`} className={styles.label}>
+          <label
+            htmlFor={`TimeMultiplier-${index}`}
+            className={`${styles.cardItem}`}
+          >
             Time Multiplier:
           </label>
           <input
@@ -262,7 +271,10 @@ const CreateBondComponent: React.FC = () => {
             className={styles.input}
           />
 
-          <label htmlFor={`PollerMaxBoost-${index}`} className={styles.label}>
+          <label
+            htmlFor={`PollerMaxBoost-${index}`}
+            className={`${styles.cardItem}`}
+          >
             Poller Max Boost:
           </label>
           <input
@@ -282,7 +294,7 @@ const CreateBondComponent: React.FC = () => {
 
           <label
             htmlFor={`PollingPowerMultiplier-${index}`}
-            className={styles.label}
+            className={`${styles.cardItem}`}
           >
             Voting Power:
           </label>

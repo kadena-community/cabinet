@@ -76,7 +76,7 @@ export interface PactTxResponse {
 
 export interface PactLockupOption {
   "option-name": string;
-  "option-length": number;
+  "option-length": { int: number };
   "time-multiplier": number;
   "poller-max-boost": number;
   "polling-power-multiplier": number;

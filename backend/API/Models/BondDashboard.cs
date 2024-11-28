@@ -1,3 +1,5 @@
+using Dab.API.Models.Events;
+
 namespace Dab.API.Models.Dashboard;
 
 public class LockDTO
@@ -17,6 +19,17 @@ public class LockDTO
         RequestKey = evt.RequestKey;
         LockTime = DateTime.TryParse(evt.BlockTime, out var lockTime) ? lockTime : default;
     }
+
+    public LockDTO(LockEvent evt)
+    {
+        BondId = evt.BondId;
+        Account = evt.Account;
+        LockedAmount = evt.Amount;
+        MaxRewards = evt.Rewards;
+        RequestKey = evt.RequestKey;
+        LockTime = evt.Timestamp;
+    }
+
 }
 
 public class ClaimDTO
@@ -36,6 +49,16 @@ public class ClaimDTO
         RequestKey = evt.RequestKey;
         ClaimTime = DateTime.TryParse(evt.BlockTime, out var lockTime) ? lockTime : default;
     }
+    public ClaimDTO(ClaimEvent evt)
+    {
+        BondId = evt.BondId;
+        Account = evt.Account;
+        Amount = evt.OriginalAmount;
+        TotalAmount = evt.TotalAmount;
+        RequestKey = evt.RequestKey;
+        ClaimTime = evt.Timestamp;
+    }
+
 }
 
 public class PollVoteEventDTO
@@ -47,12 +70,21 @@ public class PollVoteEventDTO
     public string RequestKey { get; set; } = "";
     public PollVoteEventDTO(EventDTO evt)
     {
-        PollId = evt.Params[0]?.ToString();
-        Account = evt.Params[1]?.ToString();
+        PollId = evt.Params[1]?.ToString();
+        Account = evt.Params[0]?.ToString();
         Action = evt.Params[2]?.ToString();
         RequestKey = evt.RequestKey;
         VoteTime = DateTime.TryParse(evt.BlockTime, out var lockTime) ? lockTime : default;
     }
+    public PollVoteEventDTO(VoteEvent evt)
+    {
+        PollId = evt.PollId;
+        Account = evt.Account;
+        Action = evt.Action;
+        RequestKey = evt.RequestKey;
+        VoteTime = evt.Timestamp;
+    }
+
 }
 
 
@@ -84,6 +116,7 @@ public class BondDashboard
     public List<LockDTO> LatestLocks { get; set; } = new();
     public List<ClaimDTO> LatestClaims { get; set; } = new();
     public List<PollVoteEventDTO> LatestVotes { get; set; } = new();
+    public bool ActivePool {get; set;}
 }
 
 public class VoteDistributionDTO

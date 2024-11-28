@@ -51,7 +51,7 @@ const CumulativeLockupChart: React.FC = () => {
       <ResponsiveContainer className="z-10" width="100%" height={300}>
         <AreaChart
           data={chartData}
-          margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+          margin={{ top: 20, right: 30, left: 30, bottom: 20 }}
         >
           <XAxis
             dataKey="date"

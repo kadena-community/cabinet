@@ -37,3 +37,12 @@ public class ClaimEvent : IBondEvent
 
     public decimal Amount => TotalAmount;
 }
+
+public class VoteEvent
+{
+    public string Account { get; set; } = "";
+    public string PollId { get; set; } = "";
+    public string Action { get; set; } = "";
+    public DateTime Timestamp { get; set; }
+    public string RequestKey { get; set; } = "";
+}

@@ -7,12 +7,8 @@ Kadena Cabinet is a Community Advisory Board (CAB) where KDA token holders come 
 - **Chainweb Node Instance:**
   - An instance of the [Chainweb Node](https://github.com/kadena-io/chainweb-node) with the `allowReadsInLocal: true` parameter set.
 
-- **One of the Following:**
-  - A [Kadena GraphQL](https://github.com/kadena-community/kadena.js/tree/main/packages/apps/graph) server.
-  - Access to the `events` endpoint from [Chainweb Data](https://github.com/kadena-io/chainweb-data).
-  - SQL access to the PostgreSQL database from [Chainweb Data](https://github.com/kadena-io/chainweb-data).
-
-
+- A **[Kadena GraphQL](https://github.com/kadena-community/kadena.js/tree/main/packages/apps/graph)** server
+  
 ## Project Structure
 
 - `pact/`: Smart contracts and related files for on-chain governance.

@@ -12,13 +12,19 @@ import {
 } from "./dashboardSlice";
 import { BLOCK_EXPLORER } from "@/constants/chainInfo";
 import styles from "../../styles/main.module.css";
-import { shortenHash, shortenKAddress } from "../../utils/kadenaHelper";
+import {
+  getRandomId,
+  shortenHash,
+  shortenKAddress,
+} from "../../utils/kadenaHelper";
 import LockTimeDistributionChart from "./lockTimeChart";
 import AmountDistributionChart from "./amountChart";
 import DailyLockupsChart from "./dailyLockupsChart";
 import DailyTvlChart from "./dailyTvlChart";
 import CumulativeLockupChart from "./cumulativeLockups";
 import { AppLoader } from "../components/Loader";
+import { useAddPopup } from "../main/hooks";
+import { fetchActivePolls } from "../poll/pollSlice";
 
 const formatNumber = (num: number) => {
   if (num >= 1e9) {
@@ -36,6 +42,7 @@ const DashboardComponent: React.FC = () => {
   const dispatch = useAppDispatch();
   const dashboardDetails = useAppSelector(selectApiDashboard);
   const loading = useAppSelector(selectLoadingState);
+  const addPopup = useAddPopup();
 
   useEffect(() => {
     dispatch(getApiAnalyticsAsync());
@@ -68,7 +75,7 @@ const DashboardComponent: React.FC = () => {
       <div className="card">
         <h1 className="dashboardTitle">Cabinet Overview</h1>
 
-        <AppLoader true size="48px" stroke="#E27B38" />
+        <AppLoader size="48px" stroke="#E27B38" />
       </div>
     );
 
@@ -136,10 +143,10 @@ const DashboardComponent: React.FC = () => {
           <h2 className="text-lg">Average Lockup Period</h2>
           <p className="text-2xl">{dashboardDetails?.AverageLockup}</p>
         </div>
-        {/*        <div className={`${styles.cardItem} mb-8 flex flex-col h-full`}>
+        <div className={`${styles.cardItem} mb-8 flex flex-col h-full`}>
           <h2 className="text-lg">Most Voted Poll</h2>
           <p className="text-2xl">{dashboardDetails?.MostVotedPoll}</p>
-        </div>*/}
+        </div>
       </div>
 
       <div className="w-full">
@@ -271,8 +278,8 @@ const DashboardComponent: React.FC = () => {
                         rel="noopener noreferrer"
                       >
                         <p>
-                          {vote.Account} {vote.Action} by{" "}
-                          {shortenKAddress(vote.PollId)}
+                          {vote.PollId}: {vote.Action} by{" "}
+                          {shortenKAddress(vote.Account)}
                         </p>
                         <p>
                           Voted at {new Date(vote.VoteTime).toLocaleString()}

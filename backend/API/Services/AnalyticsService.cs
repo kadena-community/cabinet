@@ -68,13 +68,9 @@ public class AnalyticsService : IAnalyticsService
 
     public async Task<List<LockDTO>> GetLatestLocks(bool ignoreCache = false)
     {
-        var lockupsInContract = await _bondService.GetAllLockups();
-        if (!lockupsInContract.Any()) return new List<LockDTO>();
+        var lockupsInContract = await _bondService.GetAllLockupEvents();
 
-        var evt = $"{ns}.bonder.LOCK";
-        var query = await CacheEventSearch(evt, ignoreCache);
-
-        return query
+        return lockupsInContract
             .Select(evt => new LockDTO(evt))
             .OrderByDescending(dto => dto.LockTime)
             .Take(3)
@@ -83,13 +79,9 @@ public class AnalyticsService : IAnalyticsService
 
     public async Task<List<ClaimDTO>> GetLatestClaims(bool ignoreCache = false)
     {
-        var lockupsInContract = await _bondService.GetAllLockups();
-        if (!lockupsInContract.Any()) return new List<ClaimDTO>();
+        var claimsInContract = await _bondService.GetAllClaimEvents();
 
-        var evt = $"{ns}.bonder.CLAIM";
-        var query = await CacheEventSearch(evt, ignoreCache);
-
-        return query
+        return claimsInContract
             .Select(evt => new ClaimDTO(evt))
             .OrderByDescending(dto => dto.ClaimTime)
             .Take(3)
@@ -98,13 +90,9 @@ public class AnalyticsService : IAnalyticsService
 
     public async Task<List<PollVoteEventDTO>> GetLatestVotes(bool ignoreCache = false)
     {
-        var lockupsInContract = await _bondService.GetAllLockups();
-        if (!lockupsInContract.Any()) return new List<PollVoteEventDTO>();
+        var votesInContract = await _bondService.GetAllVoteEvents();
 
-        var evt = $"{ns}.poller.VOTE";
-        var query = await CacheEventSearch(evt, ignoreCache);
-
-        return query
+        return votesInContract
             .Select(evt => new PollVoteEventDTO(evt))
             .OrderByDescending(dto => dto.VoteTime)
             .Take(3)
@@ -240,7 +228,8 @@ public class AnalyticsService : IAnalyticsService
                 MostVotedPoll = await SafeExecute(async () => await GetMostVotedPoll(ignoreCache), ""),
                 AverageLockup = await SafeExecute(async () => await GetAverageLockup(ignoreCache), ""),
                 MaxReturnRate = await SafeExecute(async () => await GetMaxReturnRate(ignoreCache), 0m),
-                TotalLockedAmount = await SafeExecute(async () => (await _bondService.GetAllLockupEvents(ignoreCache)).Sum(x => x.Amount + x.Rewards), 0m)
+                TotalLockedAmount = await SafeExecute(async () => (await _bondService.GetAllLockupEvents(ignoreCache)).Sum(x => x.Amount + x.Rewards), 0m),
+                ActivePool = await SafeExecute(async () => (await IsPollActive(ignoreCache)), false)
             };
 
             var jsonResult = Utils.JsonPrettify(ret);
@@ -268,6 +257,19 @@ public class AnalyticsService : IAnalyticsService
         }
     }
 
+    private async Task<bool> IsPollActive(bool ignoreCache = false)
+    {
+
+        try
+        {
+            var pools = await _pollService.GetActivePolls(ignoreCache);
+            return pools.Any();
+        }
+        catch
+        {
+            return false;
+        }
+    }
 
     private async Task<decimal> GetGlobalGivenRewards(bool ignoreCache = false)
     {

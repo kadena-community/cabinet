@@ -4,8 +4,6 @@ using Dab.API.Models.Pact;
 
 namespace Dab.API.Models.Bonder;
 
-//FIXME these types require more testing (not handled {decimal:})
-
 public class LockupOption
 {
     [JsonPropertyName("option-name")]
