@@ -104,9 +104,5 @@ Here's a concise breakdown of the folder names and their specific purposes:
 
 ## Data Sources
 
-The API fetches and processes blockchain historical data from the following sources:
-
-1. **Chainweb Data**: Retrieves transaction and event history directly from Chainweb’s API endpoints.
-2. **PostgreSQL Database**: Queries historical data stored locally for faster access and caching.
-3. **GraphQL**: Pulls data using GraphQL queries from Kadena’s testnet or mainnet.
+The API fetches and processes blockchain historical data using **GraphQL** event queries from Kadena’s testnet or mainnet.
 
