@@ -74,10 +74,7 @@ To run the Cabinet Backend API, ensure you have the following:
 - **DabContractConfig**:
   - `ContractChain`: The specific chain ID for contract interactions.
   - `Namespace`: Namespace used for the contracts.
-  - `ChainwebDataUrl`: URL for accessing Chainweb Data API.
   - `GraphQLEndpoint`: The endpoint for Kadena's GraphQL server.
-- **ConnectionStrings**:
-  - `DefaultConnection`: PostgreSQL connection string for accessing historical data directly from the database.
 
 ## Getting Started
 
