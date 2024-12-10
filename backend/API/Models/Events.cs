@@ -35,7 +35,7 @@ public class ClaimEvent : IBondEvent
     public string RequestKey { get; set; } = "";
     public string Type {get; set;} = "Claim";
 
-    public decimal Amount => TotalAmount;
+    public decimal Amount => OriginalAmount;
 }
 
 public class VoteEvent

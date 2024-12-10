@@ -251,30 +251,18 @@ public class BondService : IBondService
         var allLocks = await GetAllLockupEvents(ignoreCache);
         var allClaims = await GetAllClaimEvents(ignoreCache);
 
-        var combinedEvents = new List<IBondEvent>();
-        var matchedLocks = new HashSet<LockEvent>();
-        var matchedClaims = new HashSet<ClaimEvent>();
+        var combinedEvents = allLocks
+        .Where(l => l.BondId == bondId)
+        .Cast<IBondEvent>()
+        .ToList();
 
-        foreach (var claim in allClaims.Where(c => c.BondId == bondId))
-        {
-            var matchedLock = allLocks
-                .Where(l => l.BondId == bondId && l.Account == claim.Account && l.Amount == claim.Amount)
-                .Where(l => l.Timestamp.AddSeconds((double)l.LockupLength) <= claim.Timestamp)
-                .Where(l => l.Rewards >= claim.Rewards)
-                .OrderBy(l => l.Timestamp)
-                .FirstOrDefault();
+        combinedEvents.AddRange(
+            allClaims.Where(c => c.BondId == bondId)
+                     .Cast<IBondEvent>()
+        );
 
-            if (matchedLock != null)
-            {
-                combinedEvents.Add(claim);
-                matchedLocks.Add(matchedLock);
-                matchedClaims.Add(claim);
-            }
-        }
+        return combinedEvents;
 
-        combinedEvents.AddRange(allLocks.Where(l => l.BondId == bondId && !matchedLocks.Contains(l)));
-
-        return combinedEvents.Cast<IBondEvent>().ToList();
     }
 
     public async Task<decimal> GetMaxLockupReturns(decimal amount, decimal length, string bondId, bool ignoreCache = false)
