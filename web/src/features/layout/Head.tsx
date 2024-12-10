@@ -2,10 +2,8 @@ import React, { useEffect, useState } from "react";
 import { Menu } from "react-feather";
 import useScrollPosition from "@react-hook/window-scroll";
 import { useKadenaReact } from "../../kadena/core";
-import { useLoginModalToggle } from "../wallet/hooks";
 import Web3Status from "../components/Web3Status";
 import CabinetLogo from "@/assets/images/cabinetLogo.svg"; // Light mode SVG
-import { selectIsCoreMember } from "../bond/bondSlice";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import {
   CHAIN_INFO,
@@ -16,14 +14,20 @@ import GasStation from "@/features/gasStation";
 import ActivityBar from "@/features/activityBar";
 import SidebarModal from "./SidebarModal"; // Import SidebarModal component
 import ThemeToggle from "./ThemeToggler";
+import {
+  selectGasStationEnabled,
+  toggleGasStation,
+} from "../gasStation/gasSlice";
+import { useAddPopup } from "../main/hooks";
 
 export default function Head() {
   const dispatch = useAppDispatch();
-  const toggleLoginModal = useLoginModalToggle();
-  const { account } = useKadenaReact();
+  const kda = useKadenaReact();
   const scrollY = useScrollPosition(60); // The value here sets when the header style changes
-  const isCoreMember = useAppSelector(selectIsCoreMember);
   const [isSidebarOpen, setSidebarOpen] = useState(false); // State to toggle sidebar
+  const gasStationEnabled = useAppSelector(selectGasStationEnabled);
+  const addPopup = useAddPopup();
+  const popupShownKey = "gasStationPopupShown";
 
   // Add hasMounted state
   const [hasMounted, setHasMounted] = useState(false);
@@ -31,6 +35,27 @@ export default function Head() {
   useEffect(() => {
     setHasMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (
+      kda.connector?.constructor?.name === "WalletConnect" &&
+      gasStationEnabled
+    ) {
+      // Disable gas station for WalletConnect users if currently enabled
+      dispatch(toggleGasStation());
+
+      const popupShown = localStorage.getItem(popupShownKey);
+
+      if (!popupShown) {
+        addPopup({
+          reqKey: undefined,
+          msg: `Gas station disabled due to known issues with your provider.`,
+          status: "WARNING",
+        });
+        localStorage.setItem(popupShownKey, "true");
+      }
+    }
+  }, [kda.connector, dispatch]);
 
   return (
     <div
@@ -57,7 +82,7 @@ export default function Head() {
           </p>
           <ThemeToggle />
           <GasStation />
-          {account?.account && <ActivityBar accountId={account.account} />}
+          {kda?.account && <ActivityBar accountId={kda.account.account} />}
           <Web3Status />
         </div>
       </div>

@@ -138,7 +138,7 @@ const Lockups: React.FC = () => {
     <div className="container mx-auto">
       {loading && (
         <div>
-          <AppLoader true size="96px" stroke="#E27B38" />
+          <AppLoader size="96px" stroke="#E27B38" />
         </div>
       )}
       {error && <Error message={error} />}

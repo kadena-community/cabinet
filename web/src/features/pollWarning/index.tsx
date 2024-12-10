@@ -35,7 +35,7 @@ const VoteWarning: React.FC = () => {
   useEffect(() => {
     dispatch(fetchActivePolls(false));
     const fetchVoteStatus = async () => {
-      if (account && activePolls) {
+      if (account && activePolls.length > 0) {
         console.log(JSON.stringify(activePolls));
         const pollIds = activePolls.map((poll) => poll.pollId);
         try {
