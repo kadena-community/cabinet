@@ -4,7 +4,7 @@ import {
   useAddTransaction,
   useUpdateTransaction,
 } from "@/features/main/hooks";
-import { listen, getRandomId, localTxn } from "@/utils/kadenaHelper";
+import { listen, getRandomId, localTxn, sendTxn } from "@/utils/kadenaHelper";
 import {
   getLockupDetailsAsync,
   getLockupStatsAsync,
@@ -12,8 +12,6 @@ import {
 import createLockup from "@/features/lockup/createLockup";
 import { INewLockup } from "@/features/lockup/types";
 import { useKadenaReact } from "@/kadena/core";
-import Pact from "pact-lang-api";
-import { CHAIN_INFO, KADENA_NETWORK_ID } from "@/constants/chainInfo";
 
 export function useCreateLockup() {
   const dispatch = useAppDispatch();
@@ -27,24 +25,20 @@ export function useCreateLockup() {
     if (!account || !bondId) return;
 
     const signCmd = await createLockup(params);
-    const nodeUrl = CHAIN_INFO[KADENA_NETWORK_ID].nodeUrl;
 
     const response = await connector.signTx(signCmd);
 
-    console.log("resp:", response);
+    console.log("Signed response:", response);
     if (response.status === "success" && response.signedCmd?.hash) {
       const localRes = await localTxn(response.signedCmd);
-      console.log("Local:", JSON.stringify(localRes));
+      console.log("Local response:", JSON.stringify(localRes));
 
       if (localRes?.result?.status === "success") {
         try {
-          const poll = await Pact.wallet.sendSigned(
-            response.signedCmd,
-            nodeUrl,
-          );
-          console.log("send tx:", poll);
+          const poll = await sendTxn(response.signedCmd);
+          console.log("Send Response:", poll);
 
-          const reqKey = poll.requestKeys ? poll.requestKeys[0] : undefined;
+          const reqKey = poll?.reqKey ? poll.reqKey : undefined;
 
           if (reqKey) {
             addPopup(
@@ -84,15 +78,12 @@ export function useCreateLockup() {
               );
             }
           } else {
-            addPopup(
-              { msg: `Failed to retrieve request key`, status: "ERROR" },
-              getRandomId(),
-            );
+            addPopup({ msg: poll?.message, status: "ERROR" }, getRandomId());
           }
         } catch (error) {
           addPopup(
             {
-              msg: `Failed to send transaction: ${(error as Error).message}`,
+              msg: `Failed to send transaction: ${error}`,
               status: "ERROR",
             },
             getRandomId(),

@@ -8,6 +8,6 @@ export const GAS = {
 export const KADENA_TX_CONFIG = {
   TTL: 28800,
   GAS_LIMIT: 3000,
-  GAS_PRICE: 0.000001,
+  GAS_PRICE: 0.0000001,
   CHAIN_ID: KADENA_CHAIN_ID,
 };

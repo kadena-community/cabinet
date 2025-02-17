@@ -4,11 +4,9 @@ import {
   useAddTransaction,
   useUpdateTransaction,
 } from "@/features/main/hooks";
-import { listen, getRandomId, localTxn } from "@/utils/kadenaHelper";
+import { listen, getRandomId, localTxn, sendTxn } from "@/utils/kadenaHelper";
 import { getAllBondsAsync } from "@/features/bond/bondSlice";
 import { useKadenaReact } from "@/kadena/core";
-import Pact from "pact-lang-api";
-import { CHAIN_INFO, KADENA_NETWORK_ID } from "@/constants/chainInfo";
 import addBondRewards from "@/features/manageRewards/addRewardsTx";
 import claimBackRewards from "@/features/manageRewards/claimBackRewardsTx";
 import IManageRewards from "@/features/manageRewards/types";
@@ -28,7 +26,6 @@ export function useManageRewards() {
     if (!account || !bondId) return;
 
     const signCmd = await addBondRewards(params);
-    const nodeUrl = CHAIN_INFO[KADENA_NETWORK_ID].nodeUrl;
 
     const response = await connector.signTx(signCmd);
 
@@ -39,13 +36,10 @@ export function useManageRewards() {
 
       if (localRes?.result?.status === "success") {
         try {
-          const poll = await Pact.wallet.sendSigned(
-            response.signedCmd,
-            nodeUrl,
-          );
-          console.log("send tx:", poll);
+          const poll = await sendTxn(response.signedCmd);
+          console.log("Send Response:", poll);
 
-          const reqKey = poll.requestKeys ? poll.requestKeys[0] : undefined;
+          const reqKey = poll?.reqKey ? poll.reqKey : undefined;
 
           if (reqKey) {
             addPopup(
@@ -82,10 +76,7 @@ export function useManageRewards() {
               dispatch(getAllBondsAsync());
             }
           } else {
-            addPopup(
-              { msg: `Failed to retrieve request key`, status: "ERROR" },
-              getRandomId(),
-            );
+            addPopup({ msg: poll?.message, status: "ERROR" }, getRandomId());
           }
         } catch (error) {
           addPopup(
@@ -115,7 +106,6 @@ export function useManageRewards() {
     if (!account || !bondId) return;
 
     const signCmd = await claimBackRewards(params);
-    const nodeUrl = CHAIN_INFO[KADENA_NETWORK_ID].nodeUrl;
 
     const response = await connector.signTx(signCmd);
 
@@ -126,13 +116,10 @@ export function useManageRewards() {
 
       if (localRes?.result?.status === "success") {
         try {
-          const poll = await Pact.wallet.sendSigned(
-            response.signedCmd,
-            nodeUrl,
-          );
-          console.log("send tx:", poll);
+          const poll = await sendTxn(response.signedCmd);
+          console.log("Send Response:", poll);
 
-          const reqKey = poll.requestKeys ? poll.requestKeys[0] : undefined;
+          const reqKey = poll?.reqKey ? poll.reqKey : undefined;
 
           if (reqKey) {
             addPopup(
@@ -169,10 +156,7 @@ export function useManageRewards() {
               dispatch(getAllBondsAsync());
             }
           } else {
-            addPopup(
-              { msg: `Failed to retrieve request key`, status: "ERROR" },
-              getRandomId(),
-            );
+            addPopup({ msg: poll?.message, status: "ERROR" }, getRandomId());
           }
         } catch (error) {
           addPopup(

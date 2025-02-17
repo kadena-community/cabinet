@@ -210,6 +210,45 @@ export const localTxn = async (cmd: {}): Promise<
   }
 };
 
+export const sendTxn = async (cmd: {}): Promise<
+  | {
+      status: string;
+      message: string;
+      reqKey?: string;
+    }
+  | undefined
+> => {
+  const nodeUrl = CHAIN_INFO[KADENA_NETWORK_ID].nodeUrl;
+
+  try {
+    // Ensure the command is wrapped in the "cmds" array
+    const payload = {
+      cmds: [cmd],
+    };
+
+    const response = await fetch(`${nodeUrl}/api/v1/send`, mkReq(payload));
+    const parsedResponse = await parseRes(response);
+
+    console.log("response:", parsedResponse);
+    if (parsedResponse?.requestKeys?.[0]) {
+      return {
+        status: "success",
+        message: "Transaction submitted successfully.",
+        reqKey: parsedResponse.requestKeys[0],
+      };
+    } else {
+      return {
+        status: "failure",
+        message: parsedResponse,
+        reqKey: "",
+      };
+    }
+  } catch (e: unknown) {
+    console.error("Error in sendTxn:", e);
+    throw new Error(e instanceof Error ? e.message : "Unknown error occurred");
+  }
+};
+
 export const parseRes = async function (raw: any) {
   const rawRes = await raw;
   const res = await rawRes;
