@@ -80,7 +80,7 @@ const UserVotes: React.FC<UserVotesProps> = ({ account }) => {
     <div className="container mx-auto">
       {loading && (
         <div>
-          <AppLoader true size="16px" stroke="#E27B38" />
+          <AppLoader size="16px" stroke="#E27B38" />
         </div>
       )}
       {error && <Error message={error} />}
