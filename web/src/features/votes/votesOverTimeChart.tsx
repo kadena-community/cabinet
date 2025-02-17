@@ -33,7 +33,7 @@ const VotesOverTimeAreaChart: React.FC = () => {
   if (!votesOverTime) {
     return (
       <div>
-        <AppLoader active={true} size="16px" stroke="#E27B38" />
+        <AppLoader size="16px" stroke="#E27B38" />
       </div>
     );
   }

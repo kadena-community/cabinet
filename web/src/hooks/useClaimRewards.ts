@@ -3,7 +3,7 @@ import {
   getLockupDetailsAsync,
   getLockupStatsAsync,
 } from "@/features/lockup/lockupSlice";
-import { listen, getRandomId, localTxn } from "@/utils/kadenaHelper";
+import { listen, getRandomId, localTxn, sendTxn } from "@/utils/kadenaHelper";
 import {
   useAddPopup,
   useAddTransaction,
@@ -16,9 +16,6 @@ import {
 } from "@/features/gasStation/gasSlice";
 import { Lockup } from "@/features/lockup/types";
 import { useKadenaReact } from "@/kadena/core";
-import { CHAIN_INFO, KADENA_NETWORK_ID } from "@/constants/chainInfo";
-import Pact from "pact-lang-api";
-import { Bond } from "@/features/bond/types";
 
 export function useClaimRewards() {
   const dispatch = useAppDispatch();
@@ -27,7 +24,7 @@ export function useClaimRewards() {
   const updateTransaction = useUpdateTransaction();
   const isGasStationEnabled = useAppSelector(selectGasStationEnabled);
   const userGasConfig = useAppSelector(selectGasConfig);
-  const { account, connector } = useKadenaReact();
+  const { connector } = useKadenaReact();
 
   async function handleClaimRewards(lockup: Lockup, currentRewards: number) {
     if (!lockup.account || !lockup.bondId) {
@@ -50,7 +47,6 @@ export function useClaimRewards() {
       gasStationEnabled: isGasStationEnabled,
       gasConfig: userGasConfig,
     });
-    const nodeUrl = CHAIN_INFO[KADENA_NETWORK_ID].nodeUrl;
 
     const response = await connector.signTx(signCmd);
 
@@ -61,13 +57,10 @@ export function useClaimRewards() {
 
       if (localRes?.result?.status === "success") {
         try {
-          const poll = await Pact.wallet.sendSigned(
-            response.signedCmd,
-            nodeUrl,
-          );
-          console.log("send tx:", poll);
+          const poll = await sendTxn(response.signedCmd);
+          console.log("Send Response:", poll);
 
-          const reqKey = poll.requestKeys ? poll.requestKeys[0] : undefined;
+          const reqKey = poll?.reqKey ? poll.reqKey : undefined;
 
           if (reqKey) {
             addPopup(
@@ -113,10 +106,7 @@ export function useClaimRewards() {
               );
             }
           } else {
-            addPopup(
-              { msg: `Failed to retrieve request key`, status: "ERROR" },
-              getRandomId(),
-            );
+            addPopup({ msg: poll?.message, status: "ERROR" }, getRandomId());
           }
         } catch (error) {
           addPopup(

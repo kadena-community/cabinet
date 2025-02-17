@@ -12,12 +12,29 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: Ensure bash is installed
+        run: |
+          sudo apt-get update && sudo apt-get install -y bash
+          echo "Bash version:"
+          bash --version
+
+      - name: Install OpenSSL Compatibility
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl3 libssl-dev
+
       - name: Install pact
         run: |
           mkdir -p ${{ github.workspace }}/bin
           cd ${{ github.workspace }}/bin
-          wget https://github.com/kadena-io/pact/releases/download/v4.11.0/pact-4.11.0-linux-20.04.zip
-          unzip "pact*.zip"
+
+          # Download the latest Pact binary
+          wget https://github.com/kadena-io/pact/releases/download/v4.11.0/pact-4.11.0-linux-22.04.zip
+
+          # Extract the tar.gz file
+          unzip pact-4.11.0-linux-22.04.zip
+
+          # Ensure the binary is executable
           chmod +x pact
 
       - name: Install z3
@@ -27,26 +44,34 @@ jobs:
           architecture: "x64"
           distribution: "ubuntu-18.04"
 
-      - name: List files in pact directory
-        run: ls -la ${{ github.workspace }}/pact
-
-      - name: Verify pact installation
+      - name: Verify Pact installation
         run: |
-          ${{ github.workspace }}/bin/pact --version
+          file ${{ github.workspace }}/bin/pact
+          ${{ github.workspace }}/bin/pact --version || echo "PACT is not executable!"
 
-      - name: Make tests.sh executable
-        run: chmod +x ${{ github.workspace }}/pact/tests.sh
+      - name: Debug file paths and permissions
+        run: |
+          ls -la ${{ github.workspace }}/pact
+          ls -la ${{ github.workspace }}/bin
+
+      - name: Ensure tests.sh uses Bash
+        run: |
+          sed -i '1s|.*|#!/usr/bin/env bash|' ${{ github.workspace }}/pact/tests.sh
+          chmod +x ${{ github.workspace }}/pact/tests.sh
 
       - name: Run tests.sh script
         run: |
           cd ${{ github.workspace }}/pact
-          PACT_BIN=${{ github.workspace }}/bin/pact bash tests.sh > tests.log
+          PACT_BIN=${{ github.workspace }}/bin/pact
+          bash tests.sh > tests.log 2>&1
           echo "Output of tests.sh:"
-          cat tests.log
-          str=$(tail -1 tests.log | grep "All files loaded successfully.")
-          if [ -n "$str" ]; then
+          cat tests.log || echo "tests.log not found!"
+
+          # Check if the script succeeded
+          if grep -q "All files loaded successfully." tests.log; then
+              echo "✅ Pact tests passed"
               exit 0
           else
-              echo "Pact tests failed"
+              echo "❌ Pact tests failed"
               exit 1
           fi

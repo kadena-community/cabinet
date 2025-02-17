@@ -10,7 +10,6 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { PollDTO } from "./types";
-import styles from "@/styles/main.module.css";
 
 interface VoteData {
   name: string;
@@ -47,10 +46,12 @@ const VoteImpactBarChart: React.FC<VoteImpactBarChartProps> = ({
     0,
   );
 
-  // Get the list of option names, sort them alphabetically
+  // Get the list of option names, sort them alphabetically in reverse order
+  // to match the ordering used across the app.
   const optionNames = poll.pollOptions
     .map((option) => option.optionName)
-    .sort();
+    .sort()
+    .reverse();
 
   // Create a mapping from option names to colors
   const colorMap: { [optionName: string]: string } = {};
@@ -115,7 +116,7 @@ const VoteImpactBarChart: React.FC<VoteImpactBarChartProps> = ({
           }}
         >
           <XAxis type="number" domain={[0, 100]} hide />
-          <YAxis type="category" dataKey="name" width={50} axisLine={false} />
+          <YAxis type="category" dataKey="name" width={60} axisLine={false} />
           <Tooltip formatter={(value: number) => `${value.toFixed(2)}%`} />
           {/* Render bars dynamically based on options, using consistent colors */}
           {optionNames.map((optionName) => (

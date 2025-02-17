@@ -1,7 +1,11 @@
-import { KADENA_NETWORK_ID } from '../../constants/chainInfo';
-import { checkVerifiedAccount, PactCommandToSign, PactSignedTx } from '../../utils/kadenaHelper';
-import { Actions, Connector, Provider } from '../types';
-import detectKadenaProvider from './provider';
+import { KADENA_NETWORK_ID } from "../../constants/chainInfo";
+import {
+  checkVerifiedAccount,
+  PactCommandToSign,
+  PactSignedTx,
+} from "../../utils/kadenaHelper";
+import { Actions, Connector, Provider } from "../types";
+import detectKadenaProvider from "./provider";
 
 type EckoWalletProvider = Provider & {
   isKadena?: boolean;
@@ -11,7 +15,7 @@ type EckoWalletProvider = Provider & {
 
 export class NoEckoWalletError extends Error {
   public constructor() {
-    super('eckoWALLET not installed');
+    super("eckoWALLET not installed");
     this.name = NoEckoWalletError.name;
     Object.setPrototypeOf(this, NoEckoWalletError.prototype);
   }
@@ -42,21 +46,30 @@ export class EckoWallet extends Connector {
   private async isomorphicInitialize(): Promise<void> {
     if (this.eagerConnection) return;
 
-    return (this.eagerConnection = import('./provider').then(async (m) => {
+    return (this.eagerConnection = import("./provider").then(async (m) => {
       const provider = await m.default(this.options);
       if (provider) {
         this.provider = provider as EckoWalletProvider;
 
         if (this.provider.providers?.length) {
-          this.provider = this.provider.providers.find((p) => p.isKadena) ?? this.provider.providers[0];
+          this.provider =
+            this.provider.providers.find((p) => p.isKadena) ??
+            this.provider.providers[0];
         }
 
-        this.provider.on('res_accountChange', ({ result: { status, message } }: { result: { status: string; message: string } }): void => {
-          if (status === 'success') {
-            this.actions.resetState();
-            window.location.reload();
-          }
-        });
+        this.provider.on(
+          "res_accountChange",
+          ({
+            result: { status, message },
+          }: {
+            result: { status: string; message: string };
+          }): void => {
+            if (status === "success") {
+              this.actions.resetState();
+              window.location.reload();
+            }
+          },
+        );
       }
     }));
   }
@@ -68,7 +81,7 @@ export class EckoWallet extends Connector {
     url: string;
   }> {
     return this.provider?.request({
-      method: 'kda_getNetwork',
+      method: "kda_getNetwork",
     }) as Promise<{
       explorer: string;
       networkId: string;
@@ -78,15 +91,22 @@ export class EckoWallet extends Connector {
   }
 
   private async connectWallet(networkId?: string): Promise<void> {
+    const network = (await this.getNetworkInfo()).networkId;
+
+    if (network !== KADENA_NETWORK_ID)
+      alert(
+        `Your eckoWallet is connected to ${network} but should be connected to ${KADENA_NETWORK_ID} instead. Please change the network and try again.`,
+      );
+
     return this.provider?.request({
-      method: 'kda_connect',
+      method: "kda_connect",
       networkId: networkId ?? KADENA_NETWORK_ID,
     }) as Promise<void>;
   }
 
   private async disconnect(networkId?: string): Promise<void> {
     return this.provider?.request({
-      method: 'kda_disconnect',
+      method: "kda_disconnect",
       networkId: networkId ?? KADENA_NETWORK_ID,
     }) as Promise<void>;
   }
@@ -97,7 +117,7 @@ export class EckoWallet extends Connector {
     account: { chainId: string; account: string; publicKey: string };
   }> {
     return this.provider?.request({
-      method: 'kda_checkStatus',
+      method: "kda_checkStatus",
       networkId: networkId ?? KADENA_NETWORK_ID,
     }) as Promise<{
       status: string;
@@ -117,7 +137,7 @@ export class EckoWallet extends Connector {
     };
   }> {
     return this.provider?.request({
-      method: 'kda_requestAccount',
+      method: "kda_requestAccount",
       networkId: networkId ?? KADENA_NETWORK_ID,
     }) as Promise<{
       status: string;
@@ -133,7 +153,7 @@ export class EckoWallet extends Connector {
 
   public async signTx(command: PactCommandToSign): Promise<PactSignedTx> {
     const signed = (await this.provider?.request({
-      method: 'kda_requestSign',
+      method: "kda_requestSign",
       data: {
         networkId: command.networkId,
         signingCmd: { ...command, raw: false },
@@ -147,14 +167,15 @@ export class EckoWallet extends Connector {
         sigs: [
           {
             sig: string;
-          }
+          },
         ];
       };
     }>;
 
     const resp = await signed;
 
-    if (resp.status === 'success') {
+    console.log(JSON.stringify(resp));
+    if (resp.status === "success") {
       return {
         status: resp.status,
         signedCmd: resp.signedCmd,
@@ -179,7 +200,7 @@ export class EckoWallet extends Connector {
       const netWorkInfo = await this.getNetworkInfo();
       await this.connectWallet();
       const { status } = await this.checkStatus();
-      if (status === 'success') {
+      if (status === "success") {
         const { wallet } = await this.getAccountDetails();
         const { data } = await checkVerifiedAccount(wallet.account);
 
@@ -189,9 +210,9 @@ export class EckoWallet extends Connector {
           networkId: netWorkInfo.networkId,
           account: wallet,
         });
-      } else throw Error('Not Connected');
+      } else throw Error("Not Connected");
     } catch (error) {
-      console.debug('eckoWallet: Could not connect eagerly', error);
+      console.debug("eckoWallet: Could not connect eagerly", error);
       this.actions.resetState();
       cancelActivation();
     }
@@ -208,7 +229,8 @@ export class EckoWallet extends Connector {
    */
   public async activate(): Promise<void> {
     let cancelActivation: () => void = () => {};
-    if (!this.provider?.isConnected?.()) cancelActivation = this.actions.startActivation();
+    if (!this.provider?.isConnected?.())
+      cancelActivation = this.actions.startActivation();
     try {
       await this.isomorphicInitialize();
 
@@ -218,7 +240,7 @@ export class EckoWallet extends Connector {
 
       const { status } = await this.checkStatus();
 
-      if (status === 'success') {
+      if (status === "success") {
         const { wallet } = await this.getAccountDetails();
         const { data } = await checkVerifiedAccount(wallet.account);
 
@@ -228,7 +250,7 @@ export class EckoWallet extends Connector {
           networkId: netWorkInfo.networkId,
           account: wallet,
         });
-      } else throw Error('Not Connected');
+      } else throw Error("Not Connected");
     } catch (err) {
       cancelActivation?.();
       throw err;

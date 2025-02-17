@@ -25,6 +25,21 @@ interface CustomTooltipProps extends TooltipProps<number, string> {
   label?: string;
 }
 
+const CustomTooltip: React.FC<CustomTooltipProps> = ({
+  active,
+  payload,
+  label,
+}) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className={styles.analyticsTooltip}>
+        <p>{`${label} : ${payload[0].value.toLocaleString()} KDA`}</p>
+      </div>
+    );
+  }
+  return null;
+};
+
 const LockupsOverTimeBarChart: React.FC = () => {
   const lockupSummaryBar = useAppSelector(selectLockupSummaryBar) || [];
   const displayAmount = useAppSelector(selectDisplayAmount);
@@ -47,7 +62,7 @@ const LockupsOverTimeBarChart: React.FC = () => {
   if (!lockupSummaryBar) {
     return (
       <div>
-        <AppLoader true size="24px" stroke="#E27B38" />
+        <AppLoader size="24px" stroke="#E27B38" />
       </div>
     );
   }

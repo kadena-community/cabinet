@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import {
   fetchAllPolls,
@@ -30,6 +31,7 @@ import { Dropdown } from "@/features/components/Dropdown";
 import { getAllBondsAsync, selectAllBonds } from "../bond/bondSlice";
 import { Bond } from "../bond/types";
 import { OptionType } from "../components/Dropdown/types";
+import CollapsiblePollDescription from "./CollapsiblePollDescription";
 
 const Polls: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -390,11 +392,13 @@ const Polls: React.FC = () => {
                   >
                     {p.poll.title}
                   </h2>
-                  <p
+                  <div
                     className={`${styles.cardItem} ${styles.limitedWidthPoll} text-justify`}
                   >
-                    {p.poll.description}
-                  </p>
+                    <CollapsiblePollDescription
+                      description={p.poll.description}
+                    />
+                  </div>
                 </div>
                 <div className="mt-auto flex justify-between space-x-2">
                   <button
