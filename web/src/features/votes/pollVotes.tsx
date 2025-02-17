@@ -10,6 +10,7 @@ import VotesOverTimeBarChart from "./votesOverTimeChart";
 import VoteDistributionPieChart from "./totalVotesChart";
 import PollVotesComponent from "./PollVotesComponent";
 import { XCircle } from "react-feather";
+import PollDescription from "../poll/PollDescription";
 
 interface PollDetailsModalProps {
   poll: PollDTO;
@@ -131,7 +132,7 @@ const PollDetailsModal: React.FC<PollDetailsModalProps> = ({
           </div>
 
           <h2 className="text-xl font-semibold">{poll.title}</h2>
-          <p className="text-lg text-justify">{poll.description}</p>
+          <PollDescription description={poll.description} />
           <div className="flex mt-4 justify">
             <div className="grid grid-cols-1  gap-x-24 md:grid-cols-3">
               <div className={`${styles.cardItem} mb-3`}>

@@ -10,6 +10,7 @@ import VoteImpactBarChart from "./ProjectedVotes";
 import styles from "@/styles/main.module.css";
 import { Dropdown } from "@/features/components/Dropdown";
 import { OptionType } from "@/features/components/Dropdown/types";
+import CollapsiblePollDescription from "./CollapsiblePollDescription";
 
 interface PollVoteModalProps {
   poll: PollDTO;
@@ -156,7 +157,9 @@ const PollVoteModal: React.FC<PollVoteModalProps> = ({
             onClick={onClose}
           />
         </div>
-        <div className="mb-4 text-lg">{poll.description}</div>
+        <div className="mb-4 text-lg">
+          <CollapsiblePollDescription description={poll.description} />
+        </div>
         <div className="flex mx-auto justify-between">
           <div className={`${styles.cardItem} mb-3`}>
             <h3 className="text-lg">Voting Power</h3>
