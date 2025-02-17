@@ -13,6 +13,7 @@ import { WalletConnectModal } from "@walletconnect/modal";
 import Client from "@walletconnect/sign-client";
 import { SessionTypes } from "@walletconnect/types";
 import { getSdkError } from "@walletconnect/utils";
+import { hash } from "node:crypto";
 
 type WalletConnectProvider = Provider & {
     connected: boolean;
@@ -129,11 +130,7 @@ export class WalletConnect extends Connector {
             pairingTopic: pairing?.topic,
             requiredNamespaces: {
                 kadena: {
-                    methods: [
-                        "kadena_getAccounts_v1",
-                        "kadena_sign_v1",
-                        "kadena_quicksign_v1",
-                    ],
+                    methods: ["kadena_getAccounts_v1", "kadena_quicksign_v1"],
                     chains: [
                         "kadena:mainnet01",
                         "kadena:testnet04",
@@ -239,10 +236,65 @@ export class WalletConnect extends Connector {
             throw new Error("WalletConnect session is not initialized");
         }
 
-        const request = {
-            method: "kadena_sign_v1",
-            params: command,
+        // Transform the caps into the expected Pact capability format.
+        // If an item has a "cap" property, extract its inner object.
+        const clist = (command.caps || []).map((item) =>
+            item.cap ? { name: item.cap.name, args: item.cap.args } : item,
+        );
+
+        // Build the properly formatted Pact command payload.
+        const properCmdPayload = {
+            networkId: command.networkId,
+            payload: {
+                exec: {
+                    code: command.code,
+                    data: command.envData || null,
+                },
+            },
+            signers: [
+                {
+                    pubKey: command.signingPubKey,
+                    clist, // use the mapped capabilities
+                },
+            ],
+            meta: {
+                creationTime: Math.floor(Date.now() / 1000), // required field
+                ttl: command.ttl,
+                gasLimit: command.gasLimit,
+                chainId: command.chainId,
+                gasPrice: command.gasPrice,
+                sender: command.sender,
+            },
+            nonce: command.nonce || "cabinet-wc-quicksign",
         };
+
+        // Log the constructed command payload.
+        console.log(
+            "Proper command payload:",
+            JSON.stringify(properCmdPayload, null, 2),
+        );
+
+        console.log("Account data:", command.signingPubKey);
+
+        // Build the quicksign request payload (including full JSON-RPC structure).
+        const request = {
+            id: 1,
+            jsonrpc: "2.0",
+            method: "kadena_quicksign_v1",
+            params: {
+                commandSigDatas: [
+                    {
+                        cmd: JSON.stringify(properCmdPayload),
+                        sigs: [{ pubKey: command.signingPubKey, sig: null }],
+                    },
+                ],
+            },
+        };
+
+        // Log the full request, chainId, and topic for further inspection.
+        console.log("Full request:", JSON.stringify(request, null, 2));
+        console.log("ChainId:", `kadena:${KADENA_NETWORK_ID}`);
+        console.log("Topic:", this.provider.session.topic);
 
         try {
             console.log("Sending request to WalletConnect client...");
@@ -252,36 +304,67 @@ export class WalletConnect extends Connector {
                 request,
             })) as any;
 
-            console.log("SENDING:", JSON.stringify(signed));
-            console.log(
-                "Received response from WalletConnect client:",
-                JSON.stringify(signed),
-            );
+            console.log("Raw response:", JSON.stringify(signed, null, 2));
 
+            // Try to extract an array of responses from either "results" or "responses"
+            let responses: any[] | undefined;
             if (signed && typeof signed === "object") {
-                if ("body" in signed) {
+                if (Array.isArray(signed.results)) {
+                    responses = signed.results;
+                } else if (Array.isArray(signed.responses)) {
+                    responses = signed.responses;
+                }
+            }
+
+            if (responses && responses.length > 0) {
+                const firstResponse = responses[0];
+                if (!firstResponse.outcome) {
                     return {
-                        status: "success",
-                        signedCmd: {
-                            cmd: signed.body.cmd,
-                            hash: signed.body.hash,
-                            sigs: signed.body.sigs,
-                        },
-                        errors: null,
+                        status: "error",
+                        signedCmd: firstResponse.commandSigData,
+                        errors: "No outcome provided in the response.",
                     };
-                } else if ("signedCmd" in signed) {
-                    return {
-                        status: "success",
-                        signedCmd: signed.signedCmd,
-                        errors: null,
-                    };
+                }
+                const outcome = firstResponse.outcome;
+                console.log("Outcome:", JSON.stringify(outcome, null, 2));
+
+                // Process the different outcomes
+                switch (outcome.result) {
+                    case "success":
+                        return {
+                            status: "success",
+                            signedCmd: {
+                                cmd: firstResponse.commandSigData.cmd,
+                                hash: outcome.hash,
+                                sigs: firstResponse.commandSigData.sigs,
+                            },
+                            errors: null,
+                        };
+                    case "failure":
+                        return {
+                            status: "error",
+                            signedCmd: firstResponse.commandSigData,
+                            errors: outcome.msg || "Failure during signing",
+                        };
+                    case "noSig":
+                        return {
+                            status: "error",
+                            signedCmd: firstResponse.commandSigData,
+                            errors: "No signature was added",
+                        };
+                    default:
+                        return {
+                            status: "error",
+                            signedCmd: firstResponse.commandSigData,
+                            errors: `Unknown outcome: ${outcome.result}`,
+                        };
                 }
             }
 
             return {
                 status: "error",
                 signedCmd: null,
-                errors: "Invalid response from WalletConnect. Try disabling the gas station and try again.",
+                errors: "Invalid response from WalletConnect.",
             };
         } catch (error) {
             console.error("Error signing transaction:", error);
