@@ -36,27 +36,6 @@ export default function Head() {
     setHasMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (
-      kda.connector?.constructor?.name === "WalletConnect" &&
-      gasStationEnabled
-    ) {
-      // Disable gas station for WalletConnect users if currently enabled
-      dispatch(toggleGasStation());
-
-      const popupShown = localStorage.getItem(popupShownKey);
-
-      if (!popupShown) {
-        addPopup({
-          reqKey: undefined,
-          msg: `Gas station disabled due to known issues with your provider.`,
-          status: "WARNING",
-        });
-        localStorage.setItem(popupShownKey, "true");
-      }
-    }
-  }, [kda.connector, dispatch]);
-
   return (
     <div
       className={`headerWrapper headerWrapperWithBorder ${
