@@ -132,9 +132,7 @@ export class WalletConnect extends Connector {
                 kadena: {
                     methods: ["kadena_getAccounts_v1", "kadena_quicksign_v1"],
                     chains: [
-                        "kadena:mainnet01",
-                        "kadena:testnet04",
-                        "kadena:development",
+                        `kadena:${process.env.NEXT_PUBLIC_KADENA_NETWORK_ID}`,
                     ],
                     events: [],
                 },
