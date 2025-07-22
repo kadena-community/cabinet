@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build-env
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build-env
 
 COPY . .
 
@@ -8,7 +8,7 @@ RUN dotnet restore
 
 RUN dotnet publish -c Release -o out
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS run-env
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS run-env
 
 EXPOSE 5000
 
