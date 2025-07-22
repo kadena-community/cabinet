@@ -31,7 +31,7 @@
                 "copy-to-clipboard": "^3.3.3",
                 "date-fns": "^4.1.0",
                 "lucide-react": "^0.454.0",
-                "next": "15.2.3",
+                "next": "15.0.2",
                 "next-redux-wrapper": "^8.1.0",
                 "next-svg": "^1.0.7",
                 "next-svgr": "^0.0.2",
