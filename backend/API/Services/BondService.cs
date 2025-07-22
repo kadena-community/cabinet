@@ -314,7 +314,7 @@ public class BondService : IBondService
 
         }
 
-        var code = $"({ns}.bonder.get-bond-keys)";
+        var code = $"(keys {ns}.bonder.bond-sales)";
         var resp = await _pactService.RunLocalCommand(chain, code);
         var ret = Utils.JsonPrettify(resp);
 
@@ -343,6 +343,77 @@ public class BondService : IBondService
         await _cacheService.SetItem(cacheKey, ret, expirySeconds);
         return JsonSerializer.Deserialize<bool>(resp);
     }
+
+
+        public async Task<Dictionary<string, bool>> IsBonderAccountMultiple(List<string> accounts, bool ignoreCache = false)
+    {
+        try
+        {
+            var results = new Dictionary<string, bool>();
+            var accountsToQuery = new List<string>();
+
+            foreach (var account in accounts)
+            {
+                var cacheKey = CacheKeys.BondingStatus(account);
+
+                if (!ignoreCache && await _cacheService.HasItem(cacheKey))
+                {
+                    var cached = await _cacheService.GetItem<string>(cacheKey);
+                    results[account] = JsonSerializer.Deserialize<bool>(cached);
+                }
+                else
+                {
+                    accountsToQuery.Add(account);
+                }
+            }
+
+            if (accountsToQuery.Count > 0)
+            {
+                // Initialize all queried accounts to false
+                foreach (var account in accountsToQuery)
+                {
+                    results[account] = false;
+                }
+
+                var bondIds = await GetAllBondIds();
+                foreach (var bondId in bondIds)
+                {
+                    var accountListString = string.Join(" ", accountsToQuery.Select(acc => $"\"{acc}\""));
+                    var code = $"(map (lambda (x) (not ({ns}.bonder.can-account-bond x \"{bondId}\"))) [{accountListString}])";
+                    var resp = await _pactService.RunLocalCommand(chain, code);
+                    var boolList = JsonSerializer.Deserialize<List<bool>>(resp) ?? throw new Exception("Failed to query bonder data");
+
+                    for (int i = 0; i < accountsToQuery.Count; i++)
+                    {
+                        var account = accountsToQuery[i];
+                        var isBonder = boolList[i];
+                        
+                        // If account has lockup in ANY bond, set to true (don't overwrite true with false)
+                        if (isBonder)
+                        {
+                            results[account] = true;
+                        }
+                    }
+                }
+
+                // Cache the final results
+                foreach (var account in accountsToQuery)
+                {
+                    var cacheKey = CacheKeys.BondingStatus(account);
+                    await _cacheService.SetItem(cacheKey, Utils.JsonPrettify(results[account]), expirySeconds);
+                }
+            }
+
+            return results;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, e.Message);
+            return new Dictionary<string, bool>();
+        }
+    }
+
+
 
     public async Task<bool> IsCoreAccount(string account, bool ignoreCache = false)
     {

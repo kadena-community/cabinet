@@ -18,6 +18,7 @@ public interface IBondService
     Task<List<string>> GetAllBondIds(bool ignoreCache = false);
     Task<AccountStats> GetAccountStats(string account, bool ignoreCache = false);
     Task<bool> IsBonderAccount(string account, bool ignoreCache = false);
+    Task<Dictionary<string, bool>> IsBonderAccountMultiple(List<string> accounts, bool ignoreCache = false);
     Task<bool> IsCoreAccount(string account, bool ignoreCache = false);
     Task<List<LockupOption>> GetBondLockupOptions(string bondId, bool ignoreCache = false);
     Task<bool> CanAccountBond(string account, string bondId, bool ignoreCache = false);
