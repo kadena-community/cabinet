@@ -32,7 +32,7 @@ export const Dropdown = ({
         <ArrowDown className="text-black w-6 h-6 dark:text-k-Cream-default" />
       </div>
       {open && (
-        <div className="absolute z-10 top-12 left-0 right-0 bg-k-Cream-default text-black dark:bg-k-Blue-700 dark:text-k-Cream-default rounded-b-xl shadow-lg max-h-72 overflow-y-auto">
+        <div className="absolute z-50 top-12 left-0 right-0 bg-k-Cream-default text-black dark:bg-k-Blue-700 dark:text-k-Cream-default rounded-b-xl shadow-lg max-h-32 overflow-y-scroll border border-gray-200" style={{maxHeight: '128px', overflowY: 'scroll'}}>
           {options.map((opt, index) => (
             <div
               key={index}
