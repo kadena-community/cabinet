@@ -9,11 +9,29 @@ on:
 jobs:
   frontend-build:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
-      - name: build
+      - uses: actions/checkout@v3
+
+      - name: Enable Corepack and install Yarn 4.9.2
+        run: |
+          corepack enable
+          corepack prepare yarn@4.9.2 --activate
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Restore Yarn cache
+        uses: actions/cache@v4
+        with:
+          path: web/.yarn/cache
+          key: yarn-${{ runner.os }}-${{ hashFiles('web/yarn.lock') }}
+          restore-keys: |
+            yarn-${{ runner.os }}-
+
+      - name: Build frontend
         run: |
           cd web
-          yarn install --frozen-lockfile
-          yarn build
+          yarn install --immutable
