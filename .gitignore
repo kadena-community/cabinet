@@ -389,3 +389,8 @@ FodyWeavers.xsd
 pact/devnet/*.key
 pact/devnet/*.yaml
 pact/devnet/*.json
+pact/testnet/*
+appsettings.*
+.env*
+.pact-history
+.next

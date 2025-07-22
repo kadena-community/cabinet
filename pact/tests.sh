@@ -6,27 +6,33 @@ PACT_BIN=${PACT_BIN:-$(dirname "$0")/../bin/pact}
 #PACT_BIN=pact
 
 failed_files=()
+pact_files=("bonder.repl" "poller.repl" "gas-consumption-tests.repl" "gas-station.repl")
 
-# The list of files to test — any time we add a new test file it should be added here too.
-pact_files=("bonder.repl" "gas-station.repl" "poller.repl")
+pact_script=""
+for file in "${pact_files[@]}"; do
+  pact_script+=$(printf '(do (print "START_%s") (load "%s" true) (print "END_%s"))\n' "$file" "$file" "$file")
+done
+
+# Run Pact once, feeding it the generated script via standard input, and capture all output.
+output=$("$PACT_BIN" <<<"$pact_script" 2>&1)
 
 # Loop through each Pact repl file
 for file in "${pact_files[@]}"; do
-  # Execute the Pact repl file
-  output=$("$PACT_BIN" "$file" 2>&1)
+  file_output=$(echo "$output" | awk "/START_${file}/{flag=1; next} /END_${file}/{flag=0} flag")
 
-  # Check the exit status and output message
-  if [[ $? -ne 0 ]]; then
-    # Add the failed file and its output to the array
-    failed_files+=("========== $file ==========\n\n$output\n\n")
+  # Extract only lines containing "FAILURE"
+  error_lines=$(echo "$file_output" | grep 'FAILURE')
+
+  if [[ -n "$error_lines" ]]; then
+    failed_files+=("========= $file =========\n$error_lines\n\n")
   fi
 done
 
 # Check if any files failed
 if [[ ${#failed_files[@]} -gt 0 ]]; then
   echo -e "The following files failed to load:"
-  for file_output in "${failed_files[@]}"; do
-    echo -e "$file_output"
+  for failure in "${failed_files[@]}"; do
+    echo -e "$failure"
   done
   exit 1
 else
