@@ -138,8 +138,8 @@ namespace Dab.API.Services
             {
                 BondId = parameters.Length > 0 ? parameters[0].GetString() : "",
                 Account = parameters.Length > 1 ? parameters[1].GetString() : "",
-                Amount = parameters.Length > 2 ? decimal.Parse(parameters[2].GetRawText()) : 0,
-                Rewards = parameters.Length > 3 ? decimal.Parse(parameters[3].GetRawText()) : 0,
+                Amount = parameters.Length > 2 ? Utils.GetDecimal(parameters[2]) : 0,
+                Rewards = parameters.Length > 3 ? Utils.GetDecimal(parameters[3]) : 0,
                 LockupLength = parameters.Length > 4 ? ParseLockupLength(parameters[4]) : 0,
                 Timestamp = DateTime.Parse(nodeElement.GetProperty("block").GetProperty("creationTime").GetString()),
                 RequestKey = nodeElement.GetProperty("requestKey").GetString() ?? ""
@@ -150,8 +150,8 @@ namespace Dab.API.Services
             {
                 BondId = parameters.Length > 0 ? parameters[0].GetString() : "",
                 Account = parameters.Length > 1 ? parameters[1].GetString() : "",
-                OriginalAmount = parameters.Length > 2 ? decimal.Parse(parameters[2].GetRawText()) : 0,
-                TotalAmount = parameters.Length > 3 ? decimal.Parse(parameters[3].GetRawText()) : 0,
+                OriginalAmount = parameters.Length > 2 ? Utils.GetDecimal(parameters[2]) : 0,
+                TotalAmount = parameters.Length > 3 ? Utils.GetDecimal(parameters[3]) : 0,
                 Timestamp = DateTime.Parse(nodeElement.GetProperty("block").GetProperty("creationTime").GetString()),
                 RequestKey = nodeElement.GetProperty("requestKey").GetString() ?? ""
             });
