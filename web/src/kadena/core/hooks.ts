@@ -23,8 +23,8 @@ export function initializeConnector<T extends Connector>(f: (actions: Actions) =
   return [connector, { ...stateHooks, ...derivedHooks, ...augmentedHooks }, store];
 }
 
-function computeIsActive({ networkId, account, activating }: KadenaReactState) {
-  return Boolean(networkId && account && !activating);
+function computeIsActive({ networkId, account, activating, sharedAccounts }: KadenaReactState) {
+  return Boolean(networkId && (account || sharedAccounts) && !activating);
 }
 
 export function getSelectedConnector(...initializedConnectors: [Connector, KadenaReactHooks][] | [Connector, KadenaReactHooks, KadenaReactStore][]) {

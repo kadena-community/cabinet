@@ -15,6 +15,7 @@ import AccountDetails from "../AccountDetails";
 import { updateWalletError } from "../../wallet/walletSlice";
 import PendingView from "./PendingView";
 import AccountSelect from "../AccountSelect";
+import AccountSelectWithLockup from "../AccountSelectWithLockup";
 import AccountInsert from "../AccountInsert";
 import styles from "../../../styles/main.module.css";
 import BackIcon from "@/assets/images/back-icon.svg";
@@ -76,13 +77,16 @@ export default function WalletModal({ onClose }: WalletModalProps) {
   const onConnectSelectedAccount = useCallback(
     (account: string) => {
       const wallet = getKadenaWalletForConnector(connector);
+      
       try {
         setPendingConnector(connector);
         setWalletView(WALLET_VIEWS.PENDING);
         dispatch(updateWalletError({ wallet, error: undefined }));
+        
         connector.onSelectAccount?.(account);
+        
         dispatch(updateSelectedWallet({ wallet }));
-        dispatch
+        dispatch(setConnectedAccount(account));
       } catch (error: any) {
         dispatch(updateWalletError({ wallet, error: error.message }));
       }
@@ -124,7 +128,8 @@ export default function WalletModal({ onClose }: WalletModalProps) {
   useEffect(() => {
     if (walletModalOpen) {
       const wallet = getKadenaWalletForConnector(connector);
-      if (wallet === WalletEnum.ZELCORE && sharedAccounts && !account) {
+      
+      if ((wallet === WalletEnum.ZELCORE || wallet === WalletEnum.WALLET_CONNECT) && sharedAccounts && !account) {
         setWalletView(WALLET_VIEWS.SELECT_ACCOUNT);
       } else if (wallet === WalletEnum.CHAINWEAVER && !account) {
         setWalletView(WALLET_VIEWS.INSERT_ACCOUNT);
@@ -136,26 +141,7 @@ export default function WalletModal({ onClose }: WalletModalProps) {
     }
   }, [walletModalOpen, account, connector, sharedAccounts]);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        modalRef.current &&
-        !modalRef.current.contains(event.target as Node)
-      ) {
-        toggleWalletModal();
-      }
-    };
-
-    if (walletModalOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    } else {
-      document.removeEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [walletModalOpen, toggleWalletModal]);
+  // Removed click outside handler to prevent modal from closing when clicking outside
 
   const getOptions = () => {
     return Object.keys(KADENA_SUPPORTED_WALLETS).map((key) => {
@@ -181,12 +167,23 @@ export default function WalletModal({ onClose }: WalletModalProps) {
           <AccountDetails openOptions={openOptions} />,
         ];
       case WALLET_VIEWS.SELECT_ACCOUNT:
+        const wallet = getKadenaWalletForConnector(connector);
+        const isWalletConnect = wallet === WalletEnum.WALLET_CONNECT;
+        const hasMultipleAccounts = sharedAccounts && sharedAccounts.length > 1;
+        
         return [
           "Select Account",
-          <AccountSelect
-            openOptions={openOptions}
-            onConnectSelectedAccount={onConnectSelectedAccount}
-          />,
+          (isWalletConnect || wallet === WalletEnum.ZELCORE) && hasMultipleAccounts ? (
+            <AccountSelectWithLockup
+              openOptions={openOptions}
+              onConnectSelectedAccount={onConnectSelectedAccount}
+            />
+          ) : (
+            <AccountSelect
+              openOptions={openOptions}
+              onConnectSelectedAccount={onConnectSelectedAccount}
+            />
+          ),
         ];
       case WALLET_VIEWS.INSERT_ACCOUNT:
         return [
@@ -195,6 +192,16 @@ export default function WalletModal({ onClose }: WalletModalProps) {
             //@ts-ignore
             openOptions={openOptions}
             onConnectSelectedAccount={onConnectSelectedAccount}
+          />,
+        ];
+      case WALLET_VIEWS.PENDING:
+        return [
+          "Connecting",
+          <PendingView
+            connector={pendingConnector!}
+            error={!!pendingError}
+            tryKadenaActivation={tryActivationForKadena}
+            openOptions={openOptions}
           />,
         ];
       case WALLET_VIEWS.OPTIONS:

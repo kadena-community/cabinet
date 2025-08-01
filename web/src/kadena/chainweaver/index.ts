@@ -62,31 +62,107 @@ export class Chainweaver extends Connector {
   }
 
   public async signTx(command: PactCommandToSign): Promise<PactSignedTx> {
-    const cmdToSign = { ...command, data: command.envData };
-    const response = await fetch("http://127.0.0.1:9467/v1/sign", {
-      headers: {
-        "Content-Type": "application/json",
+  // Map capabilities into the form the quicksign endpoint expects
+  const clist = (command.caps || []).map(item =>
+    item.cap ? { name: item.cap.name, args: item.cap.args } : item
+  );
+
+  // Build the properly formatted Pact command payload.
+  const properCmdPayload = {
+    networkId: command.networkId,
+    payload: {
+      exec: {
+        code: command.code,
+        data: command.envData ?? null,
       },
+    },
+    signers: [
+      {
+        pubKey: command.signingPubKey,
+        clist,
+      },
+    ],
+    meta: {
+      creationTime: Math.floor(Date.now() / 1000),
+      ttl: command.ttl,
+      gasLimit: command.gasLimit,
+      chainId: command.chainId,
+      gasPrice: command.gasPrice,
+      sender: command.sender,
+    },
+    nonce: command.nonce ?? "cabinet-chainweaver-quicksign",
+  };
+
+  const payload = {
+    cmdSigDatas: [
+      {
+        cmd: JSON.stringify(properCmdPayload),
+        sigs: [{ pubKey: command.signingPubKey, sig: null }],
+      },
+    ],
+  };
+
+  try {
+    const response = await fetch("http://127.0.0.1:9467/v1/quicksign", {
       method: "POST",
-      body: JSON.stringify(cmdToSign),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
     });
 
-    const { body, errors } = await response.json();
+    // Attempt to parse JSON—even on error statuses, some endpoints return JSON errors
+    let body: any;
+    try {
+      body = await response.json();
+    } catch (jsonErr) {
+      console.error(JSON.stringify(jsonErr))
+      throw new Error(
+      "Could not sign with chainweaver"
+      );
+    }
 
-    if (response.ok) {
-      return {
-        status: "success",
-        errors: null,
-        signedCmd: body,
-      };
-    } else {
+    if (!response.ok) {
+      // The endpoint returned a non-2xx code
+      const serverError =
+        body.error || body.message || JSON.stringify(body, null, 2);
       return {
         status: "failure",
         signedCmd: null,
-        errors,
+        errors: `Quicksign failed: ${serverError}`,
       };
     }
+
+    // Validate shape of successful response
+    if (
+      !Array.isArray(body.responses) ||
+      body.responses.length === 0 ||
+      !body.responses[0].outcome ||
+      !body.responses[0].commandSigData
+    ) {
+      throw new Error("Unexpected response format from quicksign endpoint");
+    }
+
+    const first = body.responses[0];
+    return {
+      status: "success",
+      errors: null,
+      signedCmd: {
+        cmd: first.commandSigData.cmd,
+        hash: first.outcome.hash,
+        sigs: first.commandSigData.sigs,
+      },
+    };
+  } catch (err: any) {
+    // Network failure, timeout, or thrown above
+    const msg =
+      err instanceof Error ? err.message : String(err) || "Unknown error";
+    return {
+      status: "failure",
+      signedCmd: null,
+      errors: `Error signing transaction: ${msg}`,
+    };
   }
+  }
+
 
   /** {@inheritdoc Connector.connectEagerly} */
   public async connectEagerly(): Promise<void> {

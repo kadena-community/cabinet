@@ -576,7 +576,9 @@
          (dab.poller.create-poll "k:bonder-1"
                                  (format "This poll title with a number {}" [x])
                                  "LOCKUP_SALE-1"
-                                 (format "This is just one more poll number {}" [x]))) index-list)
+                                 (format "This is just one more poll number {}" [x])
+                                 ["Approve" "Reject" "Abstain"]
+                                 )) [1 2 3])
   )
 (commit-tx)
 
@@ -588,16 +590,16 @@
 (env-sigs [{'key: "key", 'caps: [(coin.TRANSFER "k:bonder-1" "c:J_9VEDfyu4PaZ_fzvDOKI5TiJ6miimaTgbDt396fdY8" 100.0)]}])
 (dab.bonder.lock "LOCKUP_SALE-1" (floor (days 90)) 100.0 "k:bonder-1")
 (format "Gas Comsumption: {}" [(env-gas)])
-(expect "Gas is under control"  1494 (env-gas))
+(expect "Gas is under control"  1223 (env-gas))
 (commit-tx)
 
 
 (begin-tx "Vote Gas with big table")
 (env-chain-data {"block-time": (time "2024-01-25T00:00:00Z")})
 (env-keys ["key"])
-(dab.poller.vote-refused "k:bonder-500" "CAB-1")
+(dab.poller.vote "k:bonder-500" "CAB-1" 1)
 (format "Gas Comsumption: {}" [(env-gas)])
-(expect "Gas is under control"  1176 (env-gas))
+(expect "Gas is under control"  2741 (env-gas))
 (commit-tx)
 
 
@@ -606,6 +608,6 @@
 (env-keys ["key"])
 (dab.bonder.claim "LOCKUP_SALE-1" "k:bonder-500")
 (format "Gas Comsumption: {}" [(env-gas)])
-(expect "Gas is under control" 1184 (env-gas))
+(expect "Gas is under control" 3576 (env-gas))
 (commit-tx)
                                         ;

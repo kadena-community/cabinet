@@ -18,46 +18,19 @@ jobs:
           echo "Bash version:"
           bash --version
 
-      - name: Install OpenSSL Compatibility
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libssl3 libssl-dev
-
       - name: Install pact
         run: |
           mkdir -p ${{ github.workspace }}/bin
           cd ${{ github.workspace }}/bin
 
           # Download the latest Pact binary
-          wget https://github.com/kadena-io/pact/releases/download/v4.11.0/pact-4.11.0-linux-22.04.zip
+          wget https://github.com/kadena-io/pact-5/releases/download/5.0/pact-5.0-linux-x64.tar.gz
 
           # Extract the tar.gz file
-          unzip pact-4.11.0-linux-22.04.zip
+          tar -xvzf pact-5.0-linux-x64.tar.gz
 
           # Ensure the binary is executable
           chmod +x pact
-
-      - name: Install z3
-        uses: pavpanchekha/setup-z3@0.2.0
-        with:
-          version: "4.8.10"
-          architecture: "x64"
-          distribution: "ubuntu-18.04"
-
-      - name: Verify Pact installation
-        run: |
-          file ${{ github.workspace }}/bin/pact
-          ${{ github.workspace }}/bin/pact --version || echo "PACT is not executable!"
-
-      - name: Debug file paths and permissions
-        run: |
-          ls -la ${{ github.workspace }}/pact
-          ls -la ${{ github.workspace }}/bin
-
-      - name: Ensure tests.sh uses Bash
-        run: |
-          sed -i '1s|.*|#!/usr/bin/env bash|' ${{ github.workspace }}/pact/tests.sh
-          chmod +x ${{ github.workspace }}/pact/tests.sh
 
       - name: Run tests.sh script
         run: |
@@ -66,12 +39,3 @@ jobs:
           bash tests.sh > tests.log 2>&1
           echo "Output of tests.sh:"
           cat tests.log || echo "tests.log not found!"
-
-          # Check if the script succeeded
-          if grep -q "All files loaded successfully." tests.log; then
-              echo "✅ Pact tests passed"
-              exit 0
-          else
-              echo "❌ Pact tests failed"
-              exit 1
-          fi

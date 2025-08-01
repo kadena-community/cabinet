@@ -6,15 +6,16 @@ on:
   pull_request:
     branches: [main]
 
-
 jobs:
   backend-build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - uses: actions/setup-dotnet@v2
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
       - name: Restore dependencies
         run: |
           cd backend/API

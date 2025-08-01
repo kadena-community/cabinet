@@ -10,6 +10,7 @@ import {
   getLockupSummary,
   getLockups,
   getLockup,
+  isBonderAccountMultiple,
 } from "./bondAPI";
 import { Bond, BondState, LockupDensityDTO, LockupSummaryDTO } from "./types";
 import { IBondEvent, Lockup } from "../lockup/types";
@@ -142,6 +143,27 @@ export const checkIsBonderAccountAsync = createAsyncThunk(
   },
 );
 
+export const checkIsBonderAccountMultipleAsync = createAsyncThunk(
+  "bond/isBonderAccountMultiple",
+  async ({
+    accounts,
+    ignoreCache = false,
+  }: {
+    accounts: string[];
+    ignoreCache?: boolean;
+  }) => {
+    const response = await isBonderAccountMultiple(accounts, ignoreCache);
+    const { jsonString, hasErrors } = response;
+
+    if (jsonString && !hasErrors) {
+      const parsed = JSON.parse(jsonString) as Record<string, boolean>;
+      return parsed;
+    }
+
+    throw new Error("Failed to retrieve bonder status or encountered errors");
+  },
+);
+
 export const checkCanAccountBondAsync = createAsyncThunk<
   boolean,
   { account: string; bondId: string }
@@ -264,6 +286,24 @@ const bondSlice = createSlice({
       .addCase(checkCanAccountBondAsync.rejected, (state, action) => {
         state.error = action.payload as string;
         state.loading = false;
+      })
+      .addCase(checkIsBonderAccountMultipleAsync.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(
+        checkIsBonderAccountMultipleAsync.fulfilled,
+        (state, action: PayloadAction<Record<string, boolean>>) => {
+          state.loading = false;
+          // You can decide what to do here. A suggestion:
+          // Store in a map if you want to persist the multiple results
+          // Otherwise leave it empty if you're just using it once in components
+        },
+      )
+      .addCase(checkIsBonderAccountMultipleAsync.rejected, (state, action) => {
+        state.loading = false;
+        state.error =
+          (action.payload as string) ||
+          "Failed to fetch bonder account statuses";
       })
       .addCase(getLockupsAsync.pending, (state) => {})
       .addCase(

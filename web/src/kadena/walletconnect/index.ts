@@ -13,7 +13,6 @@ import { WalletConnectModal } from "@walletconnect/modal";
 import Client from "@walletconnect/sign-client";
 import { SessionTypes } from "@walletconnect/types";
 import { getSdkError } from "@walletconnect/utils";
-import { hash } from "node:crypto";
 
 type WalletConnectProvider = Provider & {
     connected: boolean;
@@ -42,6 +41,7 @@ export class WalletConnect extends Connector {
     private modal: WalletConnectModal;
     private client?: Client;
     private eagerConnection?: Promise<void>;
+    private parsedAccounts?: { kadena: string; network: string; account: string; publicKey: string; }[];
 
     constructor({
         actions,
@@ -102,23 +102,26 @@ export class WalletConnect extends Connector {
         };
     }
 
-    private getDataFromSession(session: any) {
-        switch (KADENA_NETWORK_ID) {
-            case "mainnet01":
-                return this.parseAccountData(
-                    session.namespaces.kadena.accounts[0],
-                );
-            case "testnet04":
-                return this.parseAccountData(
-                    session.namespaces.kadena.accounts[1],
-                );
-            case "development":
-                return this.parseAccountData(
-                    session.namespaces.kadena.accounts[2],
-                );
-            default:
-                throw new Error("Unrecognized network");
+    private async getDataFromSession(session: SessionTypes.Struct): Promise<{
+        kadena: string;
+        network: string;
+        account: string;
+        publicKey: string;
+    }[]> {
+        const rawAccounts = session.namespaces.kadena.accounts;
+        const parsedAccounts = rawAccounts.map((raw) =>
+            this.parseAccountData(raw),
+        );
+        
+        // Filter accounts to only include those matching the current network
+        const currentNetwork = KADENA_NETWORK_ID;
+        const filteredAccounts = parsedAccounts.filter(acc => acc.network === currentNetwork);
+        
+        if (filteredAccounts.length === 0) {
+            console.warn("WalletConnect: No accounts match the current network");
         }
+        
+        return filteredAccounts;
     }
 
     private async connectWallet(pairing?: { topic: string }): Promise<void> {
@@ -145,10 +148,7 @@ export class WalletConnect extends Connector {
 
         const session = await approval();
         await this.onSessionConnected(session);
-        console.log("session:", session);
-        console.log("sess data:", this.getDataFromSession(session));
-        const walletData = session.peer.metadata;
-        console.log("wallet data:", walletData);
+        
         this.modal.closeModal();
     }
 
@@ -383,15 +383,10 @@ export class WalletConnect extends Connector {
             await this.connectWallet();
             const { status } = await this.checkStatus();
             if (status === "success") {
-                const { wallet } = await this.getAccountDetails();
-                const { data } = await checkVerifiedAccount(wallet.account);
-
-                wallet.balance = data ? data.balance : 0;
-
-                this.actions.update({
-                    networkId: KADENA_NETWORK_ID,
-                    account: wallet,
-                });
+                // Connection successful - sharedAccounts are set by onSessionConnected
+                if (!this.parsedAccounts || this.parsedAccounts.length === 0) {
+                    throw new Error("No accounts available");
+                }
             } else throw Error("Not Connected");
         } catch (error) {
             console.debug("WalletConnect: Could not connect eagerly", error);
@@ -408,20 +403,7 @@ export class WalletConnect extends Connector {
             await this.isomorphicInitialize();
 
             await this.connectWallet();
-
-            const { status } = await this.checkStatus();
-
-            if (status === "success") {
-                const { wallet } = await this.getAccountDetails();
-                const { data } = await checkVerifiedAccount(wallet.account);
-
-                wallet.balance = data ? data.balance : 0;
-
-                this.actions.update({
-                    networkId: KADENA_NETWORK_ID,
-                    account: wallet,
-                });
-            } else throw Error("Not Connected");
+            // Connection successful - sharedAccounts are set by onSessionConnected
         } catch (err) {
             cancelActivation?.();
             throw err;
@@ -486,20 +468,14 @@ export class WalletConnect extends Connector {
     }
 
     private async onSessionConnected(session: SessionTypes.Struct) {
-        console.log("Starting onSessionConnected method...");
-        console.log("Session received:", session);
-
-        const accountData = this.getDataFromSession(session);
-        console.log("Parsed account data:", accountData);
-
-        // Log current provider state before updating
-        console.log("Current provider state:", this.provider);
+        // Parse accounts and filter by network
+        this.parsedAccounts = await this.getDataFromSession(session);
 
         // Ensure the provider has the required properties
         const updatedProvider: any = {
             ...this.provider,
             connected: true,
-            accounts: [accountData.account],
+            accounts: this.parsedAccounts.map(acc => acc.account),
             session: session,
             sendCustomRequest:
                 this.provider?.sendCustomRequest ??
@@ -525,32 +501,67 @@ export class WalletConnect extends Connector {
 
         this.provider = updatedProvider;
 
-        // Log updated provider state after updating
-        console.log("Updated provider state:", this.provider);
-
-        const account: KadenaAccount = {
-            account: accountData.account,
-            chainId: KADENA_CHAIN_ID,
-            balance: 0,
-            publicKey: accountData.publicKey,
-        };
-
-        try {
-            console.log("Verifying account...");
-            const { data } = await checkVerifiedAccount(account.account);
-            account.balance = data ? data.balance : 0;
-            console.log("Account verification result:", data);
-        } catch (error) {
-            console.error("Error verifying account:", error);
-            account.balance = 0; // Set balance to 0 if there was an error
+        // Set sharedAccounts to trigger account selection UI
+        const sharedAccounts = this.parsedAccounts.map(acc => acc.account);
+        
+        // Handle edge case where no accounts match current network
+        if (sharedAccounts.length === 0) {
+            this.actions.update({
+                networkId: KADENA_NETWORK_ID,
+                sharedAccounts: [],
+            });
+            return;
         }
+        
+        // If only one account, auto-connect; otherwise set sharedAccounts for selection UI
+        if (sharedAccounts.length === 1) {
+            await this.onSelectAccount(sharedAccounts[0]);
+        } else {
+            this.actions.update({
+                networkId: KADENA_NETWORK_ID,
+                sharedAccounts: sharedAccounts,
+            });
+        }
+    }
 
-        console.log("Updating actions with account data...");
-        this.actions.update({
-            networkId: KADENA_NETWORK_ID,
-            account: account,
-        });
+    public async onSelectAccount(account: string): Promise<void> {
+        try {
+            const { data } = await checkVerifiedAccount(account);
+            
+            // Create account object - set balance to 0 if verification fails (like EckoWallet does)
+            const kadenaAccount: KadenaAccount = {
+                account: account,
+                balance: data ? data.balance : 0,
+                chainId: KADENA_CHAIN_ID,
+                publicKey: this.parsedAccounts?.find(acc => acc.account === account)?.publicKey || "",
+            };
+            
+            this.actions.update({
+                networkId: KADENA_NETWORK_ID,
+                account: kadenaAccount,
+                sharedAccounts: undefined, // Clear shared accounts after selection
+            });
 
-        console.log("Updated account:", account);
+            // Close the WalletConnect modal since account selection is complete
+            this.modal.closeModal();
+        } catch (error) {
+            console.error("WalletConnect: Error selecting account:", error);
+            
+            // Still try to connect with 0 balance if there's an error
+            const kadenaAccount: KadenaAccount = {
+                account: account,
+                balance: 0,
+                chainId: KADENA_CHAIN_ID,
+                publicKey: this.parsedAccounts?.find(acc => acc.account === account)?.publicKey || "",
+            };
+            
+            this.actions.update({
+                networkId: KADENA_NETWORK_ID,
+                account: kadenaAccount,
+                sharedAccounts: undefined,
+            });
+            
+            this.modal.closeModal();
+        }
     }
 }

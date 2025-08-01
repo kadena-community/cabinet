@@ -167,6 +167,32 @@ export async function isBonderAccount(account: string, ignoreCache = false) {
   }
 }
 
+export async function isBonderAccountMultiple(
+  accounts: string[],
+  ignoreCache = false,
+): Promise<ServiceResult> {
+  const config = {
+    headers: {
+      "Content-Type": "application/json",
+    },
+    params: {
+      ignoreCache,
+    },
+  };
+
+  try {
+    const response = await axios.post<ServiceResult>(
+      `${BACKEND_API_BASE_URL}/${API_BOND_ENDPOINT}/IsBonderAccountMultiple/multiple`,
+      accounts,
+      config,
+    );
+    return response.data;
+  } catch (error: any) {
+    console.log("isBonderAccountMultiple error", error);
+    throw new Error(error.message);
+  }
+}
+
 export async function getAccountLockups(account: string, ignoreCache = false) {
   const config = {
     headers: {

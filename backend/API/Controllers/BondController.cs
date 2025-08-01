@@ -370,6 +370,31 @@ namespace Dab.API.Controllers
             }
         }
 
+        // Controller for IsBonderAccountMultiple
+        /// <summary>
+        /// Check if multiple accounts are bonder accounts, with an option to ignore cached data.
+        /// </summary>
+        /// <param name="accounts">List of account identifiers</param>
+        /// <param name="ignoreCache">Whether to ignore cached data and fetch fresh data</param>
+        [HttpPost("multiple")]
+        public async Task<IActionResult> IsBonderAccountMultiple([FromBody] List<string> accounts, [FromQuery] bool ignoreCache = false)
+        {
+            try
+            {
+                var result = await _bondService.IsBonderAccountMultiple(accounts, ignoreCache);
+                return Ok(new ServiceResult { HasErrors = false, JsonString = Utils.JsonPrettify(result) });
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error retrieving bonder status for multiple accounts: {e.Message}");
+                return BadRequest(new ServiceResult
+                {
+                    HasErrors = true,
+                    JsonString = "Error retrieving bonder status for provided accounts."
+                });
+            }
+        }
+
         // Controller for IsCoreAccount
         /// <summary>
         /// Check if an account is a core account, with an option to ignore cached data
