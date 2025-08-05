@@ -62,7 +62,7 @@ export const KADENA_SUPPORTED_WALLETS: { [key: string]: WalletInfo } = {
   },
   [WalletEnum.SNAK]: {
     connector: snak,
-    name: "snaK",
+    name: "Metamask",
     iconURL: METAMASK_ICON_URL.src,
     description: "MetaMask Snap for Kadena",
     href: null,
