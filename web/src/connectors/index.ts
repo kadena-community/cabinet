@@ -4,13 +4,15 @@ import { Connector } from "../kadena/types";
 import { EckoWallet } from "../kadena/ecko-wallet";
 import { Zelcore } from "../kadena/zelcore";
 import { Chainweaver } from "../kadena/chainweaver";
-import { WalletConnect } from "../kadena/walletconnect"; // Import WalletConnect
+import { WalletConnect } from "../kadena/walletconnect";
+import { Snak } from "../kadena/snak";
 
 export enum WalletEnum {
   ECKO_WALLET = "ECKO_WALLET",
   ZELCORE = "ZELCORE",
   CHAINWEAVER = "CHAINWEAVER",
-  WALLET_CONNECT = "WALLET_CONNECT", // Add WalletConnect enum
+  WALLET_CONNECT = "WALLET_CONNECT",
+  SNAK = "SNAK",
 }
 
 export const BACKFILLABLE_KADENA_WALLETS = [
@@ -18,6 +20,7 @@ export const BACKFILLABLE_KADENA_WALLETS = [
   WalletEnum.ZELCORE,
   WalletEnum.CHAINWEAVER,
   WalletEnum.WALLET_CONNECT,
+  WalletEnum.SNAK,
 ];
 export const SELECTABLE_KADENA_WALLETS = [...BACKFILLABLE_KADENA_WALLETS];
 
@@ -41,7 +44,10 @@ export const [walletConnect, walletConnectHooks] =
         actions,
         onError,
       }),
-  ); // Initialize WalletConnect
+  );
+export const [snak, snakHooks] = initializeConnector<Snak>(
+  (actions) => new Snak({ actions, onError }),
+);
 
 export function getKadenaWalletForConnector(connector: Connector) {
   switch (connector) {
@@ -53,6 +59,8 @@ export function getKadenaWalletForConnector(connector: Connector) {
       return WalletEnum.CHAINWEAVER;
     case walletConnect:
       return WalletEnum.WALLET_CONNECT;
+    case snak:
+      return WalletEnum.SNAK;
     default:
       throw Error("unsupported connector");
   }
@@ -68,6 +76,8 @@ export function getConnectorForKadenaWallet(wallet: WalletEnum) {
       return chainweaver;
     case WalletEnum.WALLET_CONNECT:
       return walletConnect;
+    case WalletEnum.SNAK:
+      return snak;
     default:
       throw Error("unsupported connector");
   }
@@ -83,6 +93,8 @@ function getHooksForKadenaWallet(wallet: WalletEnum) {
       return chainweaverHooks;
     case WalletEnum.WALLET_CONNECT:
       return walletConnectHooks;
+    case WalletEnum.SNAK:
+      return snakHooks;
   }
 }
 

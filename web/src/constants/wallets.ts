@@ -4,12 +4,14 @@ import ZELCORE_ICON_URL from "../assets/images/wallets/zelcore.svg?url";
 import CHAINWEAVER_ICON_URL from "../assets/images/kadena-logo.svg?url";
 // import CHAINWEAVER_ICON_URL from '../assets/images/wallets/chainweaver.svg';
 import WALLETCONNECT_ICON_URL from "../assets/images/wallets/walletconnect.svg?url";
+import METAMASK_ICON_URL from "../assets/images/wallets/metamask.svg?url";
 import {
   chainweaver,
   eckoWallet,
   WalletEnum,
   zelcore,
   walletConnect,
+  snak,
 } from "../connectors";
 import { Connector } from "../kadena/types";
 
@@ -57,5 +59,13 @@ export const KADENA_SUPPORTED_WALLETS: { [key: string]: WalletInfo } = {
     description: "WalletConnect",
     href: null,
     color: "#3B99FC",
+  },
+  [WalletEnum.SNAK]: {
+    connector: snak,
+    name: "Metamask",
+    iconURL: METAMASK_ICON_URL.src,
+    description: "MetaMask Snap for Kadena",
+    href: null,
+    color: "#F6851B",
   },
 };

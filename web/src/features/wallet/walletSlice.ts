@@ -7,11 +7,12 @@ export interface WalletState {
 
 export const initialState: WalletState = {
   errorByWallet: {
-    [WalletEnum.ECKO_WALLET]: undefined,
-    [WalletEnum.ZELCORE]: undefined,
-    [WalletEnum.CHAINWEAVER]: undefined,
-    [WalletEnum.WALLET_CONNECT]: undefined,
-  },
+        [WalletEnum.ECKO_WALLET]: undefined,
+        [WalletEnum.ZELCORE]: undefined,
+        [WalletEnum.CHAINWEAVER]: undefined,
+        [WalletEnum.WALLET_CONNECT]: undefined,
+        [WalletEnum.SNAK]: undefined,
+    },
 };
 
 const walletSlice = createSlice({
