@@ -21,11 +21,15 @@ export interface SnakConstructorArgs {
   onError?: (error: Error) => void;
 }
 
-const defaultSnapOrigin = 'local:http://localhost:8080'// 'npm:@mindsend/kadena-snap';
+const defaultSnapOrigin = 'npm:@mindsend/kadena-snap';
 
 // Type guard to check if response has responses array (success case)
 function hasResponses(resp: any): resp is { responses: any[] } {
-  return resp && typeof resp === 'object' && 'responses' in resp && Array.isArray(resp.responses);
+    return (resp &&
+        typeof resp === "object" &&
+        "responses" in resp &&
+        Array.isArray(resp.responses)
+    );
 }
 
 export class Snak extends Connector {
@@ -71,7 +75,7 @@ export class Snak extends Connector {
     try {
       const snaps = await this.provider.request({
         method: 'wallet_getSnaps',
-      });
+      }) as any;
       return Boolean(snaps[defaultSnapOrigin]);
     } catch (error) {
       console.error('Error checking snap installation:', error);
