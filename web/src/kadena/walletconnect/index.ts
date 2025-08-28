@@ -55,11 +55,7 @@ export class WalletConnect extends Connector {
                 "--wcm-z-index": "999",
             },
             projectId: process.env.NEXT_PUBLIC_WC_PROJECT_ID ?? "",
-            chains: [
-                "kadena:mainnet01",
-                "kadena:testnet04",
-                "kadena:development",
-            ],
+            chains: [`kadena:${process.env.NEXT_PUBLIC_KADENA_NETWORK_ID}`],
         });
     }
 
